@@ -61,12 +61,16 @@ type ControlMessage struct {
 	Data json.RawMessage	`json:"data"`	
 }
 
-type MarketRequest struct {
+type DataRequest struct {
 	Market 		string		`json:"market"`
 	Symbol 		string		`json:"symbol"`
 	StartTime 	time.Time	`json:"start_time"`
 	EndTime 	time.Time	`json:"end_time"`
 	Timeframe 	string		`json:"timeframe"`
+}
+
+type IngestRequest struct {
+	FileName 	string	`json:"file_name"`
 }
 
 func handle_control_message(payload string) {
@@ -82,19 +86,34 @@ func handle_control_message(payload string) {
 	log.Printf("Message type: %s", controlMessage.Type)
 
 	if controlMessage.Type == "data_request" {
-		var marketRequest MarketRequest
+		var request DataRequest
 
-		err := json.Unmarshal([]byte(controlMessage.Data), &marketRequest)
+		err := json.Unmarshal([]byte(controlMessage.Data), &request)
 		if err != nil {
 			log.Printf("Json unmarshalling failed: %d", err)
 			return
 		}
 
-		handle_data_request(marketRequest)
+		handle_data_request(request)
+	}
+	if controlMessage.Type == "ingest_request" {
+		var request IngestRequest
+
+		err := json.Unmarshal([]byte(controlMessage.Data), &request)
+		if err != nil {
+			log.Printf("Json unmarshalling failed: %d", err)
+			return
+		}
+
+		handle_ingest_request(request)
 	}
 
 }
 
-func handle_data_request(request MarketRequest) {
-	log.Printf("Handling market request: %v", request)
+func handle_data_request(request DataRequest) {
+	log.Printf("Handling data request: %v", request)
+}
+
+func handle_ingest_request(request IngestRequest) {
+	log.Printf("Handling ingest request: %v", request)
 }
