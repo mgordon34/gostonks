@@ -50,30 +50,30 @@ func main() {
 			}
 			log.Printf("New event captured on channel: %s", msg.Channel)
 			if msg.Channel == "control" {
-				handle_control_message(msg.Payload)
+				handleControlMessage(msg.Payload)
 			}
 		}
 	}
 }
 
 type ControlMessage struct {
-	Type string				`json:"type"`
-	Data json.RawMessage	`json:"data"`	
+	Type string          `json:"type"`
+	Data json.RawMessage `json:"data"`
 }
 
 type DataRequest struct {
-	Market 		string		`json:"market"`
-	Symbol 		string		`json:"symbol"`
-	StartTime 	time.Time	`json:"start_time"`
-	EndTime 	time.Time	`json:"end_time"`
-	Timeframe 	string		`json:"timeframe"`
+	Market    string    `json:"market"`
+	Symbol    string    `json:"symbol"`
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
+	Timeframe string    `json:"timeframe"`
 }
 
 type IngestRequest struct {
-	FileName 	string	`json:"file_name"`
+	FileName string `json:"file_name"`
 }
 
-func handle_control_message(payload string) {
+func handleControlMessage(payload string) {
 	log.Print("Handling control message")
 
 	var controlMessage ControlMessage
@@ -85,35 +85,30 @@ func handle_control_message(payload string) {
 
 	log.Printf("Message type: %s", controlMessage.Type)
 
-	if controlMessage.Type == "data_request" {
-		var request DataRequest
-
-		err := json.Unmarshal([]byte(controlMessage.Data), &request)
-		if err != nil {
-			log.Printf("Json unmarshalling failed: %d", err)
-			return
-		}
-
-		handle_data_request(request)
-	}
-	if controlMessage.Type == "ingest_request" {
-		var request IngestRequest
-
-		err := json.Unmarshal([]byte(controlMessage.Data), &request)
-		if err != nil {
-			log.Printf("Json unmarshalling failed: %d", err)
-			return
-		}
-
-		handle_ingest_request(request)
+	switch controlMessage.Type {
+	case "data_request":
+		decodeAndHandle(controlMessage.Data, handleDataRequest)
+	case "ingest_request":
+		decodeAndHandle(controlMessage.Data, handleIngestRequest)
+	default:
+		log.Printf("Unknown control message type: %s", controlMessage.Type)
 	}
 
 }
 
-func handle_data_request(request DataRequest) {
+func decodeAndHandle[T any](data json.RawMessage, handler func(T)) {
+	var payload T
+	if err := json.Unmarshal(data, &payload); err != nil {
+		log.Printf("Json unmarshalling failed: %v", err)
+		return
+	}
+	handler(payload)
+}
+
+func handleDataRequest(request DataRequest) {
 	log.Printf("Handling data request: %v", request)
 }
 
-func handle_ingest_request(request IngestRequest) {
+func handleIngestRequest(request IngestRequest) {
 	log.Printf("Handling ingest request: %v", request)
 }
