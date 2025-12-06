@@ -1,24 +1,19 @@
 # syntax=docker/dockerfile:1
-
 FROM golang:1.25.4-alpine AS builder
-WORKDIR /src
 
-RUN apk add --no-cache git
-
-COPY go.mod ./
-RUN go mod download
-
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/market ./cmd/market
-
-FROM alpine:latest
-WORKDIR /app
-
-RUN apk add --no-cache ca-certificates
-
-COPY --from=builder /out/market ./market
-
+ENV PROJECT_DIR=/app \
+    GO111MODULE=on \
+    CGO_ENABLED=0
 ENV REDIS_HOST=redis
 ENV REDIS_PORT=6379
 
-ENTRYPOINT ["/app/market"]
+WORKDIR /app
+
+COPY . .
+
+RUN go get github.com/githubnemo/CompileDaemon
+RUN go install github.com/githubnemo/CompileDaemon
+
+RUN go mod download
+
+ENTRYPOINT CompileDaemon -build="go build -o /build/market ./cmd/market" -command="/build/market"
