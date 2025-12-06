@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -26,7 +28,7 @@ func main() {
 	client := redis.NewClient(&redis.Options{Addr: addr})
 	defer client.Close()
 
-	pubsub := client.Subscribe(ctx, "market")
+	pubsub := client.Subscribe(ctx, "control")
 	defer pubsub.Close()
 
 	if _, err := pubsub.Receive(ctx); err != nil {
@@ -46,7 +48,53 @@ func main() {
 				log.Printf("Market subscription channel closed")
 				return
 			}
-			log.Printf("New market event captured: %s", msg.Payload)
+			log.Printf("New event captured on channel: %s", msg.Channel)
+			if msg.Channel == "control" {
+				handle_control_message(msg.Payload)
+			}
 		}
 	}
+}
+
+type ControlMessage struct {
+	Type string				`json:"type"`
+	Data json.RawMessage	`json:"data"`	
+}
+
+type MarketRequest struct {
+	Market 		string		`json:"market"`
+	Symbol 		string		`json:"symbol"`
+	StartTime 	time.Time	`json:"start_time"`
+	EndTime 	time.Time	`json:"end_time"`
+	Timeframe 	string		`json:"timeframe"`
+}
+
+func handle_control_message(payload string) {
+	log.Print("Handling control message")
+
+	var controlMessage ControlMessage
+	err := json.Unmarshal([]byte(payload), &controlMessage)
+	if err != nil {
+		log.Printf("Json unmarshalling failed: %d", err)
+		return
+	}
+
+	log.Printf("Message type: %s", controlMessage.Type)
+
+	if controlMessage.Type == "data_request" {
+		var marketRequest MarketRequest
+
+		err := json.Unmarshal([]byte(controlMessage.Data), &marketRequest)
+		if err != nil {
+			log.Printf("Json unmarshalling failed: %d", err)
+			return
+		}
+
+		handle_data_request(marketRequest)
+	}
+
+}
+
+func handle_data_request(request MarketRequest) {
+	log.Printf("Handling market request: %v", request)
 }
