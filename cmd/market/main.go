@@ -46,7 +46,7 @@ func main() {
 				log.Printf("Market subscription channel closed")
 				return
 			}
-			log.Printf("Market event captured: %s", msg.Payload)
+			log.Printf("New market event captured: %s", msg.Payload)
 		}
 	}
 }
