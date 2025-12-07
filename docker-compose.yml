@@ -6,6 +6,7 @@ services:
     environment:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      DB_URL: ${DB_URL}
     depends_on:
       - redis
     ports:
@@ -26,7 +27,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: gostonks
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: market
     ports:
       - "5432:5432"

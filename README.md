@@ -18,6 +18,7 @@ directory (e.g. `market/`) with a conventional Go layout:
 - `market/cmd/market`: container entrypoint binaries.
 - `market/internal/...`: service-scoped packages such as `market/internal/ingest` for data ingestion handlers.
 - `internal/config`: shared utilities available to all services (currently hosts the env helper used to read Redis/Postgres configuration).
+- `internal/db`: shared pgxpool wiring so every service reuses the same Postgres bootstrap logic.
 - `deploy/<service>`: Dockerfiles or container assets specific to that service.
 
 This keeps cross-service boundaries explicit while allowing shared code to live under `internal/`.
@@ -34,7 +35,8 @@ will also be specified in the candle object.
 The service currently listens to Redis pub/sub messages on the `control` channel; control messages
 are decoded into specific requests (e.g., `data_request`, `ingest_request`) and routed to handlers in
 `market/internal/ingest`. Shared configuration such as `REDIS_HOST`/`REDIS_PORT` is consumed via the
-`internal/config` package so other services can reuse the same helpers.
+`internal/config` package so other services can reuse the same helpers. Database access should go
+through the singleton helper exposed in `internal/db` to avoid duplicating pgxpool wiring.
 
 Market data is stored in a postgres database for historical use cases.
 
@@ -42,6 +44,27 @@ If the market service is tasked with providing historical data for backtesting s
 gather historical data based on the requested timeframe and send a sequential Market events to the
 message broker. A predefined backtesting session id will be passed to ensure the appropriate backtesting
 session picks up those events.
+
+
+## Configuration
+
+Local development expects a `.env` file with at least the following values so Docker Compose and Go
+services agree on how to connect to Postgres:
+
+```
+POSTGRES_PASSWORD=gostonksalonks
+POSTGRES_DSN=postgres://gostonks:gostonksalonks@localhost:5432/market?sslmode=disable
+```
+
+A typical service setup looks like:
+
+```go
+dsn := config.Get("POSTGRES_DSN", "")
+pool, err := db.Init(ctx, db.Config{ConnString: dsn})
+if err != nil {
+	log.Fatalf("connect to postgres: %v", err)
+}
+```
 
 
 ## Technology
