@@ -13,6 +13,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/mgordon34/gostonks/internal/config"
+	"github.com/mgordon34/gostonks/market/internal/ingest"
 )
 
 func main() {
@@ -69,10 +70,6 @@ type DataRequest struct {
 	Timeframe string    `json:"timeframe"`
 }
 
-type IngestRequest struct {
-	FileName string `json:"file_name"`
-}
-
 func handleControlMessage(payload string) {
 	var controlMessage ControlMessage
 	err := json.Unmarshal([]byte(payload), &controlMessage)
@@ -85,7 +82,7 @@ func handleControlMessage(payload string) {
 	case "data_request":
 		decodeAndHandle(controlMessage.Data, handleDataRequest)
 	case "ingest_request":
-		decodeAndHandle(controlMessage.Data, ingestData)
+		decodeAndHandle(controlMessage.Data, ingest.HandleIngest)
 	default:
 		log.Printf("Unknown control message type: %s", controlMessage.Type)
 	}

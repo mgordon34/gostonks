@@ -16,4 +16,4 @@ RUN go install github.com/githubnemo/CompileDaemon
 
 RUN go mod download
 
-ENTRYPOINT CompileDaemon -build="go build -o /build/market ./cmd/market" -command="/build/market"
+ENTRYPOINT CompileDaemon -build="go build -o /build/market ./market/cmd/market" -command="/build/market"
