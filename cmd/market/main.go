@@ -74,8 +74,6 @@ type IngestRequest struct {
 }
 
 func handleControlMessage(payload string) {
-	log.Print("Handling control message")
-
 	var controlMessage ControlMessage
 	err := json.Unmarshal([]byte(payload), &controlMessage)
 	if err != nil {
@@ -83,13 +81,11 @@ func handleControlMessage(payload string) {
 		return
 	}
 
-	log.Printf("Message type: %s", controlMessage.Type)
-
 	switch controlMessage.Type {
 	case "data_request":
 		decodeAndHandle(controlMessage.Data, handleDataRequest)
 	case "ingest_request":
-		decodeAndHandle(controlMessage.Data, handleIngestRequest)
+		decodeAndHandle(controlMessage.Data, ingestData)
 	default:
 		log.Printf("Unknown control message type: %s", controlMessage.Type)
 	}
@@ -107,8 +103,4 @@ func decodeAndHandle[T any](data json.RawMessage, handler func(T)) {
 
 func handleDataRequest(request DataRequest) {
 	log.Printf("Handling data request: %v", request)
-}
-
-func handleIngestRequest(request IngestRequest) {
-	log.Printf("Handling ingest request: %v", request)
 }
