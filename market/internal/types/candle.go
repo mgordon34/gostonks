@@ -1,4 +1,4 @@
-package candle
+package types
 
 import (
 	"context"
@@ -11,16 +11,16 @@ import (
 )
 
 type Candle struct {
-	ID			int 		`db:"id"`
-	Market		string 		`db:"market"`
-	Symbol		string 		`db:"symbol"`
-	Timeframe	string 		`db:"timeframe"`
-	Open		float64 	`db:"open"`
-	High		float64 	`db:"high"`
-	Low			float64 	`db:"low"`
-	Close		float64 	`db:"close"`
-	Volume		int 		`db:"volume"`
-	Timestamp	time.Time	`db:"timestamp"`
+	ID        int       `db:"id"`
+	Market    string    `db:"market"`
+	Symbol    string    `db:"symbol"`
+	Timeframe string    `db:"timeframe"`
+	Open      float64   `db:"open"`
+	High      float64   `db:"high"`
+	Low       float64   `db:"low"`
+	Close     float64   `db:"close"`
+	Volume    int       `db:"volume"`
+	Timestamp time.Time `db:"timestamp"`
 }
 
 func AddCandle(candle Candle) int {
@@ -35,15 +35,15 @@ func AddCandle(candle Candle) int {
 		ctx,
 		sql,
 		pgx.NamedArgs{
-			"market":       candle.Market,
-			"symbol": 		candle.Symbol,
-			"timeframe":	candle.Timeframe,
-			"open":  		candle.Open,
-			"high":      	candle.High,
-			"low":      	candle.Low,
-			"close":      	candle.Close,
-			"volume":      	candle.Volume,
-			"timestamp":    candle.Timestamp,
+			"market":    candle.Market,
+			"symbol":    candle.Symbol,
+			"timeframe": candle.Timeframe,
+			"open":      candle.Open,
+			"high":      candle.High,
+			"low":       candle.Low,
+			"close":     candle.Close,
+			"volume":    candle.Volume,
+			"timestamp": candle.Timestamp,
 		},
 	).Scan(&id)
 
