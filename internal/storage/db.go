@@ -38,7 +38,7 @@ func InitTables(connURL string) {
 	GetDB(connURL)
 
 	commands := []string{
-		`CREATE TABLE IF NOT EXISTS games (
+		`CREATE TABLE IF NOT EXISTS candles (
             id SERIAL PRIMARY KEY,
             market VARCHAR(255) NOT NULL,
             symbol VARCHAR(255) NOT NULL,
