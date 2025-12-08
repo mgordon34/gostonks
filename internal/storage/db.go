@@ -5,7 +5,6 @@ import (
 	"log"
 	"sync"
 
-	"github.com/mgordon34/gostonks/internal/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -22,10 +21,9 @@ func Close() {
 	pgInstance.Close()
 }
 
-func GetDB() *pgxpool.Pool {
+func GetDB(connURL string) *pgxpool.Pool {
 	pgOnce.Do(func() {
-		log.Printf("Connection string: %s", config.Get("DB_URL", "err"))
-		dbpool, err := pgxpool.New(context.Background(), config.Get("DB_URL", ""))
+		dbpool, err := pgxpool.New(context.Background(), connURL)
 		if err != nil {
 			log.Fatalf("Unable to connect to database: %v\n", err)
 		}
@@ -36,8 +34,8 @@ func GetDB() *pgxpool.Pool {
 	return pgInstance
 }
 
-func InitTables() {
-	GetDB()
+func InitTables(connURL string) {
+	GetDB(connURL)
 
 	commands := []string{
 		`CREATE TABLE IF NOT EXISTS games (

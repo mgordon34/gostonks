@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-    storage.InitTables()
+    storage.InitTables(config.Get("DB_URL", ""))
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
