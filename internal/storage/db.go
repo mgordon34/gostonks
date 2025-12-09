@@ -34,24 +34,8 @@ func GetDB(connURL string) *pgxpool.Pool {
 	return pgInstance
 }
 
-func InitTables(connURL string) {
+func InitTables(connURL string, commands []string) {
 	GetDB(connURL)
-
-	commands := []string{
-		`CREATE TABLE IF NOT EXISTS candles (
-            id SERIAL PRIMARY KEY,
-            market VARCHAR(255) NOT NULL,
-            symbol VARCHAR(255) NOT NULL,
-            timeframe VARCHAR(255) NOT NULL,
-            open REAL NOT NULL,
-            high REAL NOT NULL,
-            low REAL NOT NULL,
-            close REAL NOT NULL,
-            volume INT NOT NULL,
-			timestamp TIMESTAMPTZ NOT NULL,
-            CONSTRAINT uq_candles UNIQUE(market, symbol, timeframe, timestamp)
-        )`,
-	}
 
 	for _, command := range commands {
 		_, err := pgInstance.Exec(context.Background(), command)
