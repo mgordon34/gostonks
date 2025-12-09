@@ -16,10 +16,6 @@ type IngestRequest struct {
 func HandleIngest(request IngestRequest) {
 	log.Printf("Handing request to ingest data: %v", request)
 
-	addCandle()
-}
-
-func addCandle() {
 	c := types.Candle{
 		Market:    "futures",
 		Symbol:    "NQ",
@@ -31,7 +27,6 @@ func addCandle() {
 		Volume:    1000,
 		Timestamp: time.Now(),
 	}
-
 	id := types.AddCandle(c)
 	log.Printf("Created candle with id %d", id)
 }
