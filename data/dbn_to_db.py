@@ -1,4 +1,6 @@
+import operator
 import os
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -61,8 +63,12 @@ def insert_candle(db_url: str, candle: Candle) -> int:
 
 def unpack_dbn_from_file(dbn_path: str) -> None:
     df = databento.DBNStore.from_file(path=dbn_path).to_df()
+    i = None
+    a = None
     for index, row in df.iterrows():
-        print(f"[{index}]: {row}")
+        i = index
+        a = row
+        # print(f"[{index}]: {row}")
         # symbol: str = row.symbol[:2]
 
         # if "-" in row.symbol or symbol not in self.symbols:
@@ -73,29 +79,65 @@ def unpack_dbn_from_file(dbn_path: str) -> None:
         #         symbol, self.timeframe, index.to_pydatetime(), row.open, row.high, row.low, row.close, row.volume
         #     )
 
-def request_data():
-    dataset = "GLBX.MDP3"
-    product = "ES"
-    start = "2025-11-10"
-    end = "2025-12-10"
+    print(f"[candle]: {a}")
+    c = Candle(
+        market="futures",
+        symbol=row.symbol.split(".")[0],
+        timeframe="1m",
+        open=row.open,
+        high=row.high,
+        low=row.low,
+        close=row.close,
+        volume=row.volume,
+        timestamp=index.to_pydatetime(),
+    )
+    insert_candle(os.getenv("LOCAL_DB_URL"), c)
 
-# Create a historical client
+def request_data(symbol: str, start_date: str, end_date: str):
+    dataset = "GLBX.MDP3"
+
     client = databento.Historical(os.getenv("DB_API_KEY"))
 
-# Request OHLCV-1d data for the continuous contract
     data = client.timeseries.get_range(
         dataset=dataset,
-        schema="ohlcv-1d",
-        symbols=f"{product}.v.0",
+        schema="ohlcv-1m",
+        symbols=f"{symbol}.v.0",
         stype_in="continuous",
-        start=start,
-        end=end,
+        start=start_date,
+        end=end_date,
     )
 
-# Convert to DataFrame
+    data.to_file(f"{dataset}-{symbol}-{start_date}-{end_date}.dbn.zst")
     df = data.to_df()
 
     print(df)
+
+def get_dbn_historical_batch(symbol: str, start_date: str, end_date: str):
+    dataset = "GLBX.MDP3"
+
+    client = databento.Historical(os.getenv("DB_API_KEY"))
+    new_job = client.batch.submit_job(
+        dataset=dataset,
+        symbols=f"{symbol}.v.0",
+        schema="ohlcv-1m",
+        stype_in="continuous",
+        split_duration="month",
+        start=start_date,
+        end=end_date,
+    )
+
+    new_job_id: str = new_job["id"]
+
+    while True:
+        done_jobs = list(map(operator.itemgetter("id"), client.batch.list_jobs("done")))
+        if new_job_id in done_jobs:
+            break  # Exit the loop to continue
+        time.sleep(1.0)
+
+    client.batch.download(
+        job_id=new_job_id,
+        output_dir=Path.cwd(),
+    )
 
 
 def main() -> None:
@@ -112,9 +154,10 @@ def main() -> None:
         raise RuntimeError("DB_URL environment variable is not set")
 
     print("Querying candles table...")
+    unpack_dbn_from_file("GLBX-NQ-2025-01-01-2025-12-10/glbx-mdp3-20251201-20251209.ohlcv-1m.dbn.zst")
     print_candles(db_url)
-    # unpack_dbn_from_file("glbx-mdp3-20240829-20240831.ohlcv-1m.dbn.zst")
-    request_data()
+    # request_data("NQ", "2025-11-01", "2025-12-01")
+    # get_dbn_historical_batch("NQ", "2025-01-01", "2025-12-10")
 
 
 if __name__ == "__main__":
