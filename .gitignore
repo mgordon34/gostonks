@@ -28,6 +28,10 @@ go.work.sum
 .env
 .envrc
 
+# DBN files
+*.zst
+GLBX*
+
 # Editor/IDE
 # .idea/
 # .vscode/
