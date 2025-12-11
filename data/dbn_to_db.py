@@ -5,7 +5,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import databento
-import psycopg
+import psycopg2
+from psycopg2.extras import execute_values
 from psycopg.rows import dict_row
 
 
@@ -33,7 +34,7 @@ def list_dbn_files(directory: str = ".") -> list[str]:
 
 
 def print_candles(db_url: str) -> None:
-    with psycopg.connect(db_url) as conn, conn.cursor() as cur:
+    with psycopg2.connect(db_url) as conn, conn.cursor() as cur:
         cur.execute("SELECT * FROM candles")
         for row in cur.fetchall():
             print(row)
@@ -55,43 +56,69 @@ def insert_candle(db_url: str, candle: Candle) -> int:
         ) RETURNING id
     """
 
-    with psycopg.connect(db_url, row_factory=dict_row) as conn, conn.cursor() as cur:
+    with psycopg2.connect(db_url, row_factory=dict_row) as conn, conn.cursor() as cur:
         cur.execute(sql, payload)
         row = cur.fetchone()
         return int(row["id"])
 
 
+def insert_candles_bulk(db_url: str, candles: list[Candle], page_size: int = 500) -> int:
+    if not candles:
+        return 0
+
+    sql = """
+        INSERT INTO candles (
+            market, symbol, timeframe,
+            open, high, low, close,
+            volume, timestamp
+        ) VALUES %s
+    """
+
+    records = [
+        (
+            candle.market,
+            candle.symbol,
+            candle.timeframe,
+            candle.open,
+            candle.high,
+            candle.low,
+            candle.close,
+            candle.volume,
+            candle.timestamp,
+        )
+        for candle in candles
+    ]
+
+    with psycopg2.connect(db_url) as conn, conn.cursor() as cur:
+        execute_values(
+            cur,
+            sql,
+            records,
+            template="(%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            page_size=page_size,
+        )
+        return len(records)
+
+
 def unpack_dbn_from_file(dbn_path: str) -> None:
     df = databento.DBNStore.from_file(path=dbn_path).to_df()
-    i = None
-    a = None
+
+    candles = []
     for index, row in df.iterrows():
-        i = index
-        a = row
-        # print(f"[{index}]: {row}")
-        # symbol: str = row.symbol[:2]
+        candles.append(Candle(
+            market="futures",
+            symbol=row.symbol.split(".")[0],
+            timeframe="1m",
+            open=row.open,
+            high=row.high,
+            low=row.low,
+            close=row.close,
+            volume=row.volume,
+            timestamp=index.to_pydatetime(),
+        ))
 
-        # if "-" in row.symbol or symbol not in self.symbols:
-        #     continue
-
-        # if index not in data[symbol] or row.volume > data[symbol][index].volume:
-        #     data[symbol][index] = Candle(
-        #         symbol, self.timeframe, index.to_pydatetime(), row.open, row.high, row.low, row.close, row.volume
-        #     )
-
-    print(f"[candle]: {a}")
-    c = Candle(
-        market="futures",
-        symbol=row.symbol.split(".")[0],
-        timeframe="1m",
-        open=row.open,
-        high=row.high,
-        low=row.low,
-        close=row.close,
-        volume=row.volume,
-        timestamp=index.to_pydatetime(),
-    )
-    insert_candle(os.getenv("LOCAL_DB_URL"), c)
+    print(f"dataframe: {len(df)} vs list: {len(candles)}")
+    return candles
 
 def request_data(symbol: str, start_date: str, end_date: str):
     dataset = "GLBX.MDP3"
@@ -141,21 +168,25 @@ def get_dbn_historical_batch(symbol: str, start_date: str, end_date: str):
 
 
 def main() -> None:
-    files = list_dbn_files(".")
-    if files:
-        print("Found .dbn.zst files:")
-        for path in files:
-            print(f" - {path}")
-    else:
-        print("No .dbn.zst files found in current directory")
-
     db_url = os.getenv("LOCAL_DB_URL")
     if not db_url:
         raise RuntimeError("DB_URL environment variable is not set")
 
-    print("Querying candles table...")
-    unpack_dbn_from_file("GLBX-NQ-2025-01-01-2025-12-10/glbx-mdp3-20251201-20251209.ohlcv-1m.dbn.zst")
-    print_candles(db_url)
+    total = 0
+    files = list_dbn_files("GLBX-NQ-2025-01-01-2025-12-10")
+    if files:
+        print("Found .dbn.zst files:")
+        for path in files:
+            print(path)
+            candles = unpack_dbn_from_file(path)
+            total += len(candles)
+            insert_candles_bulk(db_url, candles)
+    else:
+        print("No .dbn.zst files found in current directory")
+
+    print(f"Inserted {total} candles")
+
+    # unpack_dbn_from_file("GLBX-NQ-2025-01-01-2025-12-10/glbx-mdp3-20251201-20251209.ohlcv-1m.dbn.zst")
     # request_data("NQ", "2025-11-01", "2025-12-01")
     # get_dbn_historical_batch("NQ", "2025-01-01", "2025-12-10")
 
