@@ -1,8 +1,8 @@
 import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
 
+import databento
 import psycopg
 from psycopg.rows import dict_row
 
@@ -17,7 +17,7 @@ class Candle:
     low: float
     close: float
     volume: int
-    timestamp: Any
+    timestamp: str  # raw dataset timestamp string (e.g., ISO-8601)
     id: int | None = None
 
 
@@ -59,6 +59,45 @@ def insert_candle(db_url: str, candle: Candle) -> int:
         return int(row["id"])
 
 
+def unpack_dbn_from_file(dbn_path: str) -> None:
+    df = databento.DBNStore.from_file(path=dbn_path).to_df()
+    for index, row in df.iterrows():
+        print(f"[{index}]: {row}")
+        # symbol: str = row.symbol[:2]
+
+        # if "-" in row.symbol or symbol not in self.symbols:
+        #     continue
+
+        # if index not in data[symbol] or row.volume > data[symbol][index].volume:
+        #     data[symbol][index] = Candle(
+        #         symbol, self.timeframe, index.to_pydatetime(), row.open, row.high, row.low, row.close, row.volume
+        #     )
+
+def request_data():
+    dataset = "GLBX.MDP3"
+    product = "ES"
+    start = "2025-11-10"
+    end = "2025-12-10"
+
+# Create a historical client
+    client = databento.Historical(os.getenv("DB_API_KEY"))
+
+# Request OHLCV-1d data for the continuous contract
+    data = client.timeseries.get_range(
+        dataset=dataset,
+        schema="ohlcv-1d",
+        symbols=f"{product}.v.0",
+        stype_in="continuous",
+        start=start,
+        end=end,
+    )
+
+# Convert to DataFrame
+    df = data.to_df()
+
+    print(df)
+
+
 def main() -> None:
     files = list_dbn_files(".")
     if files:
@@ -74,6 +113,8 @@ def main() -> None:
 
     print("Querying candles table...")
     print_candles(db_url)
+    # unpack_dbn_from_file("glbx-mdp3-20240829-20240831.ohlcv-1m.dbn.zst")
+    request_data()
 
 
 if __name__ == "__main__":
