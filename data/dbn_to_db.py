@@ -173,7 +173,7 @@ def main() -> None:
         raise RuntimeError("DB_URL environment variable is not set")
 
     total = 0
-    files = list_dbn_files("GLBX-NQ-2025-01-01-2025-12-10")
+    files = list_dbn_files("GLBX-ES-2025-01-01-2025-12-10")
     if files:
         print("Found .dbn.zst files:")
         for path in files:
@@ -186,9 +186,9 @@ def main() -> None:
 
     print(f"Inserted {total} candles")
 
+    # request_data("ES", "2025-11-01", "2025-12-01")
+    # get_dbn_historical_batch("ES", "2025-01-01", "2025-12-10")
     # unpack_dbn_from_file("GLBX-NQ-2025-01-01-2025-12-10/glbx-mdp3-20251201-20251209.ohlcv-1m.dbn.zst")
-    # request_data("NQ", "2025-11-01", "2025-12-01")
-    # get_dbn_historical_batch("NQ", "2025-01-01", "2025-12-10")
 
 
 if __name__ == "__main__":
