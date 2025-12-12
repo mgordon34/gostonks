@@ -1,9 +1,15 @@
 package historical
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
+	"github.com/mgordon34/gostonks/internal/config"
 	"github.com/mgordon34/gostonks/market/internal/types"
 )
 
@@ -25,8 +31,26 @@ func HandleDataRequest(request DataRequest) {
 
 	candles := types.GetCandles(request.Market, request.Symbol, request.Timeframe, request.StartTime, request.EndTime)
 
+	redisHost := config.Get("REDIS_HOST", "redis")
+	redisPort := config.Get("REDIS_PORT", "6379")
+	addr := fmt.Sprintf("%s:%s", redisHost, redisPort)
+
+	client := redis.NewClient(&redis.Options{Addr: addr})
+	defer client.Close()
+
+	ctx := context.Background()
 	for _, candle := range candles {
-		log.Print(candle)
+		payload, err := json.Marshal(candle)
+		if err != nil {
+			log.Printf("Failed to marshal candle: %v", err)
+			continue
+		}
+
+		if err := client.RPush(ctx, "market", payload).Err(); err != nil {
+			log.Printf("Failed to enqueue candle to redis: %v", err)
+			return
+		}
 	}
 
+	log.Printf("Enqueued %d candles to redis list 'market'", len(candles))
 }
