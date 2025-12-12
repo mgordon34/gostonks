@@ -8,17 +8,17 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 
 	"github.com/mgordon34/gostonks/internal/config"
 	"github.com/mgordon34/gostonks/internal/storage"
+	"github.com/mgordon34/gostonks/market/internal/historical"
 	"github.com/mgordon34/gostonks/market/internal/ingest"
 )
 
 func main() {
-    storage.InitTables(config.Get("DB_URL", ""), GetCommands())
+	storage.InitTables(config.Get("DB_URL", ""), GetCommands())
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

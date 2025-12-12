@@ -44,4 +44,3 @@ func InitTables(connURL string, commands []string) {
 		}
 	}
 }
-
