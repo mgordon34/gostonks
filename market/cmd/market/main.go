@@ -64,14 +64,6 @@ type ControlMessage struct {
 	Data json.RawMessage `json:"data"`
 }
 
-type DataRequest struct {
-	Market    string    `json:"market"`
-	Symbol    string    `json:"symbol"`
-	StartTime time.Time `json:"start_time"`
-	EndTime   time.Time `json:"end_time"`
-	Timeframe string    `json:"timeframe"`
-}
-
 func handleControlMessage(payload string) {
 	var controlMessage ControlMessage
 	err := json.Unmarshal([]byte(payload), &controlMessage)
@@ -82,7 +74,7 @@ func handleControlMessage(payload string) {
 
 	switch controlMessage.Type {
 	case "data_request":
-		decodeAndHandle(controlMessage.Data, handleDataRequest)
+		decodeAndHandle(controlMessage.Data, historical.HandleDataRequest)
 	case "ingest_request":
 		decodeAndHandle(controlMessage.Data, ingest.HandleIngest)
 	default:
@@ -98,8 +90,4 @@ func decodeAndHandle[T any](data json.RawMessage, handler func(T)) {
 		return
 	}
 	handler(payload)
-}
-
-func handleDataRequest(request DataRequest) {
-	log.Printf("Handling data request: %v", request)
 }

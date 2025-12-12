@@ -23,6 +23,61 @@ type Candle struct {
 	Timestamp time.Time `db:"timestamp"`
 }
 
+func GetCandles(market string, symbol string, timeframe string, startTime time.Time, endTime time.Time) []Candle {
+	ctx := context.Background()
+	db := storage.GetDB(config.Get("DB_URL", ""))
+	sql := `SELECT id, market, symbol, timeframe, open, high, low, close, volume, timestamp
+			FROM candles
+			WHERE market = @market
+			  AND symbol = @symbol
+			  AND timeframe = @timeframe
+			  AND timestamp >= @start_time
+			  AND timestamp <= @end_time
+			ORDER BY timestamp`
+
+	rows, err := db.Query(
+		ctx,
+		sql,
+		pgx.NamedArgs{
+			"market":     market,
+			"symbol":     symbol,
+			"timeframe":  timeframe,
+			"start_time": startTime,
+			"end_time":   endTime,
+		},
+	)
+	if err != nil {
+		log.Fatalf("Failed to query candles: %v", err)
+	}
+	defer rows.Close()
+
+	var candles []Candle
+	for rows.Next() {
+		var c Candle
+		if err := rows.Scan(
+			&c.ID,
+			&c.Market,
+			&c.Symbol,
+			&c.Timeframe,
+			&c.Open,
+			&c.High,
+			&c.Low,
+			&c.Close,
+			&c.Volume,
+			&c.Timestamp,
+		); err != nil {
+			log.Fatalf("Failed to scan candle: %v", err)
+		}
+		candles = append(candles, c)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Fatalf("Candle rows error: %v", err)
+	}
+
+	return candles
+}
+
 func AddCandle(candle Candle) int {
 	ctx := context.Background()
 	db := storage.GetDB(config.Get("DB_URL", ""))
