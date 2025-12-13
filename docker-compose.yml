@@ -9,8 +9,19 @@ services:
       DB_URL: ${DB_URL}
     depends_on:
       - redis
-    ports:
-      - "8080:8080"
+    volumes:
+      - ./:/app
+
+  strategy:
+    build:
+      context: .
+      dockerfile: deploy/strategy/Dockerfile
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      DB_URL: ${DB_URL}
+    depends_on:
+      - redis
     volumes:
       - ./:/app
 
