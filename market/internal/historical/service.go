@@ -8,7 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/mgordon34/gostonks/market/internal/types"
+	"github.com/mgordon34/gostonks/market/internal/candle"
 )
 
 type DataRequest struct {
@@ -25,44 +25,19 @@ type Broker interface {
 
 type Service struct {
 	broker Broker
-	Queue  string
+	repo candle.Repository
+	queue  string
 }
 
-func NewService(broker Broker) *Service {
+func NewService(broker Broker, repo candle.Repository) *Service {
 	return &Service{
 		broker: broker,
-		Queue:  "market",
+		repo: repo,
+		queue:  "market",
 	}
 }
 
 func (s *Service) HandleDataRequest(ctx context.Context, request DataRequest) {
-	// log.Printf(
-	// 	"Handling data request for %s, from %s to %s",
-	// 	request.Symbol,
-	// 	request.StartTime.Format("2006-01-02 15:04:05"),
-	// 	request.EndTime.Format("2006-01-02 15:04:05"),
-	// )
-
-	// candles, err := s.repo.GetCandles(ctx, request.Market, request.Symbol, request.Timeframe, request.StartTime, request.EndTime)
-	// if err != nil {
-	// 	log.Printf("Failed to get candles: %v", err)
-	// 	return
-	// }
-
-	// for _, candle := range candles {
-	// 	payload, err := json.Marshal(candle)
-	// 	if err != nil {
-	// 		log.Printf("Failed to marshal candle: %v", err)
-	// 		continue
-	// 	}
-
-	// 	if err := s.broker.RPush(ctx, s.queue, payload).Err(); err != nil {
-	// 		log.Printf("Failed to enqueue candle to redis: %v", err)
-	// 		return
-	// 	}
-	// }
-
-	// log.Printf("Enqueued %d candles to redis list %s", len(candles), s.queue)
 	log.Printf(
 		"Handling data request for %s, from %s to %s",
 		request.Symbol,
@@ -70,7 +45,7 @@ func (s *Service) HandleDataRequest(ctx context.Context, request DataRequest) {
 		request.EndTime.Format("2006-01-02 15:04:05"),
 	)
 
-	candles := types.GetCandles(request.Market, request.Symbol, request.Timeframe, request.StartTime, request.EndTime)
+	candles := s.repo.GetCandles(ctx, request.Market, request.Symbol, request.Timeframe, request.StartTime, request.EndTime)
 
 	for _, candle := range candles {
 		payload, err := json.Marshal(candle)
@@ -79,7 +54,7 @@ func (s *Service) HandleDataRequest(ctx context.Context, request DataRequest) {
 			continue
 		}
 
-		if err := s.broker.RPush(ctx, s.Queue, payload).Err(); err != nil {
+		if err := s.broker.RPush(ctx, s.queue, payload).Err(); err != nil {
 			log.Printf("Failed to enqueue candle to redis: %v", err)
 			return
 		}

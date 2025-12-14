@@ -1,4 +1,4 @@
-package types
+package candle
 
 import (
 	"context"
@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/mgordon34/gostonks/internal/config"
-	"github.com/mgordon34/gostonks/internal/storage"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Candle struct {
@@ -23,9 +22,20 @@ type Candle struct {
 	Timestamp time.Time `db:"timestamp"`
 }
 
-func GetCandles(market string, symbol string, timeframe string, startTime time.Time, endTime time.Time) []Candle {
-	ctx := context.Background()
-	db := storage.GetDB(config.Get("DB_URL", ""))
+type Repository interface {
+	GetCandles(ctx context.Context, market string, symbol string, timeframe string, startTime time.Time, endTime time.Time) []Candle 
+	AddCandle(ctx context.Context, candle Candle) int
+}
+
+type CandleRepository struct {
+	db 	*pgxpool.Pool
+}
+
+func NewRepository(db *pgxpool.Pool) *CandleRepository {
+	return &CandleRepository{db}
+}
+
+func (r *CandleRepository) GetCandles(ctx context.Context, market string, symbol string, timeframe string, startTime time.Time, endTime time.Time) []Candle {
 	sql := `SELECT id, market, symbol, timeframe, open, high, low, close, volume, timestamp
 			FROM candles
 			WHERE market = @market
@@ -35,7 +45,7 @@ func GetCandles(market string, symbol string, timeframe string, startTime time.T
 			  AND timestamp <= @end_time
 			ORDER BY timestamp`
 
-	rows, err := db.Query(
+	rows, err := r.db.Query(
 		ctx,
 		sql,
 		pgx.NamedArgs{
@@ -78,15 +88,11 @@ func GetCandles(market string, symbol string, timeframe string, startTime time.T
 	return candles
 }
 
-func AddCandle(candle Candle) int {
-	ctx := context.Background()
-	db := storage.GetDB(config.Get("DB_URL", ""))
+func (r *CandleRepository) AddCandle(ctx context.Context, candle Candle) int {
 	sql := `INSERT INTO candles (market, symbol, timeframe, open, high, low, close, volume, timestamp) VALUES (@market, @symbol, @timeframe, @open, @high, @low, @close, @volume, @timestamp) RETURNING id`
 
-	defer db.Close()
-
 	var id int
-	err := db.QueryRow(
+	err := r.db.QueryRow(
 		ctx,
 		sql,
 		pgx.NamedArgs{

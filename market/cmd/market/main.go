@@ -13,6 +13,7 @@ import (
 
 	"github.com/mgordon34/gostonks/internal/config"
 	"github.com/mgordon34/gostonks/internal/storage"
+	"github.com/mgordon34/gostonks/market/internal/candle"
 	"github.com/mgordon34/gostonks/market/internal/historical"
 	"github.com/mgordon34/gostonks/market/internal/ingest"
 )
@@ -37,7 +38,9 @@ func main() {
 	ch := pubsub.Channel()
 	log.Printf("Listening for market events on %s channel 'market'", addr)
 
-	historicalService := historical.NewService(client)
+	db := storage.GetDB(config.Get("DB_URL", ""))
+	candleRepository := candle.NewRepository(db)
+	historicalService := historical.NewService(client, candleRepository)
 
 	for {
 		select {
