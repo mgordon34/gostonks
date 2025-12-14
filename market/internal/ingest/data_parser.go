@@ -1,6 +1,7 @@
 package ingest
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -13,7 +14,7 @@ type IngestRequest struct {
 }
 
 // Handle processes an ingest request.
-func HandleIngest(request IngestRequest) {
+func HandleIngest(ctx context.Context, request IngestRequest) {
 	log.Printf("Handing request to ingest data: %v", request)
 
 	c := types.Candle{

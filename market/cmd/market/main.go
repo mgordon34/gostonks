@@ -26,20 +26,18 @@ func main() {
 	redisPort := config.Get("REDIS_PORT", "6379")
 	addr := fmt.Sprintf("%s:%s", redisHost, redisPort)
 
-	log.Printf("Starting market service; redis host=%s port=%s", redisHost, redisPort)
-
 	client := redis.NewClient(&redis.Options{Addr: addr})
 	defer client.Close()
-
 	pubsub := client.Subscribe(ctx, "control")
 	defer pubsub.Close()
 
 	if _, err := pubsub.Receive(ctx); err != nil {
 		log.Fatalf("Failed to subscribe to market channel: %v", err)
 	}
-
 	ch := pubsub.Channel()
 	log.Printf("Listening for market events on %s channel 'market'", addr)
+
+	historicalService := historical.NewService(client)
 
 	for {
 		select {
@@ -53,7 +51,21 @@ func main() {
 			}
 			log.Printf("New event captured on channel: %s", msg.Channel)
 			if msg.Channel == "control" {
-				handleControlMessage(msg.Payload)
+				var controlMessage ControlMessage
+				err := json.Unmarshal([]byte(msg.Payload), &controlMessage)
+				if err != nil {
+					log.Printf("Json unmarshalling failed: %d", err)
+					return
+				}
+
+				switch controlMessage.Type {
+				case "data_request":
+					decodeAndHandle(ctx, controlMessage.Data, historicalService.HandleDataRequest)
+				case "ingest_request":
+					decodeAndHandle(ctx, controlMessage.Data, ingest.HandleIngest)
+				default:
+					log.Printf("Unknown control message type: %s", controlMessage.Type)
+				}
 			}
 		}
 	}
@@ -65,29 +77,14 @@ type ControlMessage struct {
 }
 
 func handleControlMessage(payload string) {
-	var controlMessage ControlMessage
-	err := json.Unmarshal([]byte(payload), &controlMessage)
-	if err != nil {
-		log.Printf("Json unmarshalling failed: %d", err)
-		return
-	}
-
-	switch controlMessage.Type {
-	case "data_request":
-		decodeAndHandle(controlMessage.Data, historical.HandleDataRequest)
-	case "ingest_request":
-		decodeAndHandle(controlMessage.Data, ingest.HandleIngest)
-	default:
-		log.Printf("Unknown control message type: %s", controlMessage.Type)
-	}
 
 }
 
-func decodeAndHandle[T any](data json.RawMessage, handler func(T)) {
+func decodeAndHandle[T any](ctx context.Context, data json.RawMessage, handler func(context.Context, T)) {
 	var payload T
 	if err := json.Unmarshal(data, &payload); err != nil {
 		log.Printf("Json unmarshalling failed: %v", err)
 		return
 	}
-	handler(payload)
+	handler(ctx, payload)
 }
