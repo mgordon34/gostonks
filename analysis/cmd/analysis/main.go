@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/mgordon34/gostonks/analysis/internal/candle"
+	"github.com/mgordon34/gostonks/analysis/internal/strategy"
 	"github.com/mgordon34/gostonks/internal/config"
 )
 
@@ -26,7 +29,10 @@ func main() {
 	client := redis.NewClient(&redis.Options{Addr: addr})
 	defer client.Close()
 
-	log.Printf("Strategy service listening for candles on redis list 'market' at %s", addr)
+	var strategies []strategy.Strategy
+	strategies = append(strategies, strategy.NewBarStrategy("iFVG Strat", []string{"NQ"}))
+
+	log.Printf("Analysis service listening for candles on redis list 'market' at %s", addr)
 
 	for {
 		values, err := client.BLPop(ctx, 0*time.Second, "market").Result()
@@ -41,6 +47,17 @@ func main() {
 		}
 		if len(values) == 2 {
 			log.Printf("Received candle payload: %s", values[1])
+
+			var c candle.Candle
+			err := json.Unmarshal([]byte(values[1]), &c)
+			if err != nil {
+				log.Printf("Json unmarshalling failed: %d", err)
+				continue
+			}
+			log.Printf("Candle: %v", c)
+
+			// for _, strategy := range strategies {
+			// }
 			continue
 		}
 		log.Printf("Unexpected BLPOP response: %v", values)
