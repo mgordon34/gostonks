@@ -16,4 +16,4 @@ RUN go install github.com/githubnemo/CompileDaemon
 
 RUN go mod download
 
-ENTRYPOINT CompileDaemon -build="go build -o /build/strategy ./strategy/cmd/strategy" -command="/build/strategy"
+ENTRYPOINT CompileDaemon -build="go build -o /build/analysis ./analysis/cmd/analysis" -command="/build/analysis"

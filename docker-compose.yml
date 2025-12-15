@@ -12,10 +12,10 @@ services:
     volumes:
       - ./:/app
 
-  strategy:
+  analysis:
     build:
       context: .
-      dockerfile: deploy/strategy/Dockerfile
+      dockerfile: deploy/analysis/Dockerfile
     environment:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
