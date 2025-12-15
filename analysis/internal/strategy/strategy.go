@@ -1,9 +1,13 @@
 package strategy
 
-import "log"
+import (
+	"log"
+
+	"github.com/mgordon34/gostonks/analysis/internal/candle"
+)
 
 type Strategy interface {
-	ExecuteStep()
+	ExecuteStep(c candle.Candle)
 }
 
 type BarStrategy struct {
@@ -18,6 +22,10 @@ func NewBarStrategy(name string, symbols []string) *BarStrategy {
 	}
 }
 
-func (b *BarStrategy) ExecuteStep() {
-	log.Printf("Executing step for %s", b.Name)
+func (b *BarStrategy) ExecuteStep(c candle.Candle) {
+	for _, symbol := range b.Symbols {
+		if c.Symbol == symbol {
+			log.Printf("Executing step for %s", b.Name)
+		}
+	}
 }

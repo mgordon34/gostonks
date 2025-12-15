@@ -56,8 +56,9 @@ func main() {
 			}
 			log.Printf("Candle: %v", c)
 
-			// for _, strategy := range strategies {
-			// }
+			for _, strategy := range strategies {
+				strategy.ExecuteStep(c)
+			}
 			continue
 		}
 		log.Printf("Unexpected BLPOP response: %v", values)
