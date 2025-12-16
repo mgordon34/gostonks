@@ -30,7 +30,7 @@ func main() {
 	defer client.Close()
 
 	var strategies []strategy.Strategy
-	strategies = append(strategies, strategy.NewBarStrategy("iFVG Strat", []string{"NQ"}))
+	strategies = append(strategies, strategy.NewBarStrategy("iFVG Strat", "futures", []string{"NQ"}, 2880))
 
 	log.Printf("Analysis service listening for candles on redis list 'market' at %s", addr)
 
