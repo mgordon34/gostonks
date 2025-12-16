@@ -13,9 +13,9 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/mgordon34/gostonks/analysis/internal/candle"
 	"github.com/mgordon34/gostonks/analysis/internal/strategy"
 	"github.com/mgordon34/gostonks/internal/config"
+	"github.com/mgordon34/gostonks/market/cmd/candle"
 )
 
 func main() {
@@ -57,7 +57,7 @@ func main() {
 			log.Printf("Candle: %v", c)
 
 			for _, strategy := range strategies {
-				strategy.ExecuteStep(c)
+				strategy.ProcessCandle(c)
 			}
 			continue
 		}

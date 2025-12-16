@@ -8,7 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/mgordon34/gostonks/market/internal/candle"
+	"github.com/mgordon34/gostonks/market/cmd/candle"
 )
 
 type DataRequest struct {

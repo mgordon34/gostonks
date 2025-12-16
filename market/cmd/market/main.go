@@ -11,9 +11,9 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/mgordon34/gostonks/market/cmd/candle"
 	"github.com/mgordon34/gostonks/internal/config"
 	"github.com/mgordon34/gostonks/internal/storage"
-	"github.com/mgordon34/gostonks/market/internal/candle"
 	"github.com/mgordon34/gostonks/market/internal/historical"
 	"github.com/mgordon34/gostonks/market/internal/ingest"
 )
