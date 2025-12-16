@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mgordon34/gostonks/market/cmd/candle"
 )
 
@@ -22,15 +21,15 @@ type BarStrategy struct {
 	repo candle.Repository
 }
 
-func NewBarStrategy(ctx context.Context, db *pgxpool.Pool, name string, market string, symbols []string, lookback int) *BarStrategy {
+func NewBarStrategy(ctx context.Context, repo candle.Repository, name string, market string, symbols []string, lookback int) *BarStrategy {
 	return &BarStrategy{
 		ctx: ctx,
+		repo: repo,
 		Name: name,
 		Market: market,
 		Symbols: symbols,
 		Lookback: lookback,
 		Bars: make(map[string][]candle.Candle),
-		repo: candle.NewRepository(db),
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 
 	"github.com/mgordon34/gostonks/analysis/internal/strategy"
 	"github.com/mgordon34/gostonks/internal/config"
+	"github.com/mgordon34/gostonks/internal/storage"
 	"github.com/mgordon34/gostonks/market/cmd/candle"
 )
 
@@ -29,8 +30,11 @@ func main() {
 	client := redis.NewClient(&redis.Options{Addr: addr})
 	defer client.Close()
 
+	db := storage.GetDB(config.Get("DB_URL", ""))
+	candleRepository := candle.NewRepository(db)
+
 	var strategies []strategy.Strategy
-	strategies = append(strategies, strategy.NewBarStrategy("iFVG Strat", "futures", []string{"NQ"}, 2880))
+	strategies = append(strategies, strategy.NewBarStrategy(ctx, candleRepository, "iFVG Strat", "futures", []string{"NQ"}, 2880))
 
 	log.Printf("Analysis service listening for candles on redis list 'market' at %s", addr)
 
