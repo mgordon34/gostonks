@@ -34,7 +34,7 @@ func main() {
 	candleRepository := candle.NewRepository(db)
 
 	var strategies []strategy.Strategy
-	strategies = append(strategies, strategy.NewBarStrategy(ctx, candleRepository, "iFVG Strat", "futures", []string{"NQ"}, 2880))
+	strategies = append(strategies, strategy.NewBarStrategy(ctx, candleRepository, "iFVG Strat", "futures", []string{"NQ"}, 10))
 
 	log.Printf("Analysis service listening for candles on redis list 'market' at %s", addr)
 
