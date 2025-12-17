@@ -50,7 +50,7 @@ func main() {
 			continue
 		}
 		if len(values) == 2 {
-			log.Printf("Received candle payload: %s", values[1])
+			log.Printf("Received candle payload")
 
 			var c candle.Candle
 			err := json.Unmarshal([]byte(values[1]), &c)
@@ -58,7 +58,6 @@ func main() {
 				log.Printf("Json unmarshalling failed: %d", err)
 				continue
 			}
-			log.Printf("Candle: %v", c)
 
 			for _, strategy := range strategies {
 				strategy.ProcessCandle(c)
