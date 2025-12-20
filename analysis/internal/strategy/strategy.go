@@ -22,9 +22,15 @@ type BarStrategy struct {
 	Lookback int
 	Bars     map[string]map[time.Time]candle.Candle
 	repo     candle.Repository
+
+	Location *time.Location
 }
 
 func NewBarStrategy(ctx context.Context, repo candle.Repository, name string, market string, symbols []string, lookback int) *BarStrategy {
+	nyLocation, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		log.Fatalf("failed to load America/New_York location: %v", err)
+	}
 	return &BarStrategy{
 		ctx:      ctx,
 		repo:     repo,
@@ -33,6 +39,8 @@ func NewBarStrategy(ctx context.Context, repo candle.Repository, name string, ma
 		Symbols:  symbols,
 		Lookback: lookback,
 		Bars:     make(map[string]map[time.Time]candle.Candle),
+
+		Location: nyLocation,
 	}
 }
 
@@ -48,7 +56,14 @@ func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 
 			if err := b.getNCandles(c); err != nil {
 				log.Println(err)
+				return
 			}
+
+			tsNY := c.Timestamp.In(b.Location)
+			if tsNY.Hour() == 9 && tsNY.Minute() == 30 {
+				log.Printf("Candle at 09:30 America/New_York for %s", c.Symbol)
+			}
+
 		}
 	}
 }
