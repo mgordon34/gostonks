@@ -34,7 +34,7 @@ func main() {
 	candleRepository := candle.NewRepository(db)
 
 	var strategies []strategy.Strategy
-	strategies = append(strategies, strategy.NewBarStrategy(ctx, candleRepository, "iFVG Strat", "futures", []string{"NQ"}, 2880))
+	strategies = append(strategies, strategy.NewBarStrategy(ctx, candleRepository, "iFVG Strat", "futures", []string{"NQ"}, 10))
 
 	log.Printf("Analysis service listening for candles on redis list 'market' at %s", addr)
 
@@ -50,17 +50,17 @@ func main() {
 			continue
 		}
 		if len(values) == 2 {
-			log.Printf("Received candle payload")
-
 			var c candle.Candle
 			err := json.Unmarshal([]byte(values[1]), &c)
 			if err != nil {
 				log.Printf("Json unmarshalling failed: %d", err)
 				continue
 			}
+			log.Printf("Received candle payload for %s on %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
 
 			for _, strategy := range strategies {
 				strategy.ProcessCandle(c)
+				strategy.GenerateSignal(c)
 			}
 			continue
 		}

@@ -11,6 +11,7 @@ import (
 
 type Strategy interface {
 	ProcessCandle(c candle.Candle)
+	GenerateSignal(c candle.Candle)
 }
 
 type BarStrategy struct {
@@ -59,15 +60,13 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) {
 }
 
 func (b *BarStrategy) getNCandles(c candle.Candle) error {
-	endTime := c.Timestamp.Truncate(time.Minute)
-	startTime := endTime.Add(-time.Duration(b.Lookback) * time.Minute)
-
-	if b.hasCandlesForRange(c.Symbol, startTime, endTime) {
-		b.trimBars(c.Symbol, startTime)
+	if len(b.Bars[c.Symbol]) >= b.Lookback {
 		return nil
 	}
 
-	candles := b.repo.GetCandles(b.ctx, c.Market, c.Symbol, c.Timeframe, startTime, endTime)
+	log.Println("Not enough bars in history, pulling from db...")
+
+	candles := b.repo.GetPastCandles(b.ctx, c.Market, c.Symbol, c.Timeframe, c.Timestamp, b.Lookback)
 	if len(candles) > 0 {
 		if _, ok := b.Bars[c.Symbol]; !ok {
 			b.Bars[c.Symbol] = make(map[time.Time]candle.Candle)
@@ -78,11 +77,10 @@ func (b *BarStrategy) getNCandles(c candle.Candle) error {
 		}
 	}
 
-	if !b.hasCandlesForRange(c.Symbol, startTime, endTime) {
+	if len(b.Bars[c.Symbol]) < b.Lookback {
 		return fmt.Errorf("could not find all lookback candles for %s", c.Symbol)
 	}
 
-	b.trimBars(c.Symbol, startTime)
 	return nil
 }
 
