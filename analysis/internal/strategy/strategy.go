@@ -15,15 +15,16 @@ type Strategy interface {
 }
 
 type BarStrategy struct {
-	ctx      context.Context
-	Name     string
-	Market   string
-	Symbols  []string
-	Lookback int
-	Bars     map[string]map[time.Time]candle.Candle
-	repo     candle.Repository
+	ctx      	context.Context
+	Name     	string
+	Market   	string
+	Symbols  	[]string
+	Lookback 	int
+	Bars     	map[string]map[time.Time]candle.Candle
+	repo   		candle.Repository
 
-	Location *time.Location
+	Location 	*time.Location
+	Pools	 	[]LiquidityPool
 }
 
 func NewBarStrategy(ctx context.Context, repo candle.Repository, name string, market string, symbols []string, lookback int) *BarStrategy {
@@ -62,6 +63,7 @@ func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 			tsNY := c.Timestamp.In(b.Location)
 			if tsNY.Hour() == 9 && tsNY.Minute() == 30 {
 				log.Printf("Candle at 09:30 America/New_York for %s: %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
+				b.initializeDay()
 			}
 		}
 	}
@@ -98,6 +100,10 @@ func (b *BarStrategy) getNCandles(c candle.Candle) error {
 	}
 
 	return nil
+}
+
+func (b *BarStrategy) initializeDay() {
+	b.Pools = []LiquidityPool{}
 }
 
 func (b *BarStrategy) hasCandlesForRange(symbol string, start time.Time, end time.Time) bool {
