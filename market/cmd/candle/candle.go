@@ -23,16 +23,70 @@ type Candle struct {
 }
 
 type Repository interface {
-	GetCandles(ctx context.Context, market string, symbol string, timeframe string, startTime time.Time, endTime time.Time) []Candle 
+	GetCandles(ctx context.Context, market string, symbol string, timeframe string, startTime time.Time, endTime time.Time) []Candle
+	GetPastCandles(ctx context.Context, market string, symbol string, timeframe string, startTime time.Time, count int) []Candle
 	AddCandle(ctx context.Context, candle Candle) int
 }
 
 type CandleRepository struct {
-	db 	*pgxpool.Pool
+	db *pgxpool.Pool
 }
 
 func NewRepository(db *pgxpool.Pool) *CandleRepository {
 	return &CandleRepository{db}
+}
+
+func (r *CandleRepository) GetPastCandles(ctx context.Context, market string, symbol string, timeframe string, startTime time.Time, count int) []Candle {
+	sql := `SELECT id, market, symbol, timeframe, open, high, low, close, volume, timestamp
+			FROM candles
+			WHERE market = @market
+			  AND symbol = @symbol
+			  AND timeframe = @timeframe
+			  AND timestamp <= @start_time
+			ORDER BY timestamp DESC
+			LIMIT @count`
+
+	rows, err := r.db.Query(
+		ctx,
+		sql,
+		pgx.NamedArgs{
+			"market":     market,
+			"symbol":     symbol,
+			"timeframe":  timeframe,
+			"start_time": startTime,
+			"count":      count,
+		},
+	)
+	if err != nil {
+		log.Fatalf("Failed to query past candles: %v", err)
+	}
+	defer rows.Close()
+
+	var candles []Candle
+	for rows.Next() {
+		var c Candle
+		if err := rows.Scan(
+			&c.ID,
+			&c.Market,
+			&c.Symbol,
+			&c.Timeframe,
+			&c.Open,
+			&c.High,
+			&c.Low,
+			&c.Close,
+			&c.Volume,
+			&c.Timestamp,
+		); err != nil {
+			log.Fatalf("Failed to scan past candle: %v", err)
+		}
+		candles = append(candles, c)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Fatalf("Past candle rows error: %v", err)
+	}
+
+	return candles
 }
 
 func (r *CandleRepository) GetCandles(ctx context.Context, market string, symbol string, timeframe string, startTime time.Time, endTime time.Time) []Candle {
