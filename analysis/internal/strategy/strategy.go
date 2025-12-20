@@ -61,16 +61,17 @@ func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 
 			tsNY := c.Timestamp.In(b.Location)
 			if tsNY.Hour() == 9 && tsNY.Minute() == 30 {
-				log.Printf("Candle at 09:30 America/New_York for %s", c.Symbol)
+				log.Printf("Candle at 09:30 America/New_York for %s: %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
 			}
-
 		}
 	}
 }
 
 func (b *BarStrategy) GenerateSignal(c candle.Candle) {
 	for _, symbol := range b.Symbols {
-		log.Printf("Generating signals for %s", symbol)
+		if c.Symbol == symbol {
+			// log.Printf("Generating signals for %s", symbol)
+		}
 	}
 }
 

@@ -56,7 +56,7 @@ func main() {
 				log.Printf("Json unmarshalling failed: %d", err)
 				continue
 			}
-			log.Printf("Received candle payload for %s on %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
+			// log.Printf("Received candle payload for %s on %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
 
 			for _, strategy := range strategies {
 				strategy.ProcessCandle(c)
