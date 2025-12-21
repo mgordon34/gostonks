@@ -2,6 +2,7 @@ package strategy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -63,7 +64,7 @@ func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 			tsNY := c.Timestamp.In(b.Location)
 			if tsNY.Hour() == 9 && tsNY.Minute() == 30 {
 				log.Printf("Candle at 09:30 America/New_York for %s: %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
-				b.initializeDay()
+				b.initializeDay(c.Symbol, c.Timestamp)
 			}
 		}
 	}
@@ -102,8 +103,37 @@ func (b *BarStrategy) getNCandles(c candle.Candle) error {
 	return nil
 }
 
-func (b *BarStrategy) initializeDay() {
+func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
 	b.Pools = []LiquidityPool{}
+
+	prevDay := timestamp.AddDate(0, 0, -1)
+	asiaOpen :=  time.Date(prevDay.Year(), prevDay.Month(), prevDay.Day(), 20, 0, 0, 0, b.Location)
+	asiaClose :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 3, 0, 0, 0, b.Location)
+	log.Printf("Asia open: %s", asiaOpen.Format(time.RFC3339))
+	log.Printf("Asia close: %s", asiaClose.Format(time.RFC3339))
+	asiaLow, err := b.getMinInRange(symbol, asiaOpen, asiaClose)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Asia low: %f on %s", asiaLow.Low, asiaLow.Timestamp.In(b.Location).Format(time.RFC3339))
+}
+
+func (b *BarStrategy) getMinInRange(symbol string, startTime time.Time, endTime time.Time) (candle.Candle, error) {
+	var low candle.Candle
+
+	if startTime.After(endTime) {
+		return candle.Candle{}, errors.New("startTime cannot be past endTime")
+	}
+	for ts := startTime; !ts.After(endTime); ts = ts.Add(time.Minute) {
+		ts = ts.UTC().Truncate(time.Minute)
+		c := b.Bars[symbol][ts]
+
+		if low.Low == 0.0 || c.Low < low.Low {
+			low = c
+		}
+	}
+
+	return low, nil
 }
 
 func (b *BarStrategy) hasCandlesForRange(symbol string, start time.Time, end time.Time) bool {
