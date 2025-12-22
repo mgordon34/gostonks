@@ -2,7 +2,6 @@ package strategy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -25,7 +24,7 @@ type BarStrategy struct {
 	repo   		candle.Repository
 
 	Location 	*time.Location
-	Pools	 	[]LiquidityPool
+	Pools	 	LiquidityPoolManager
 }
 
 func NewBarStrategy(ctx context.Context, repo candle.Repository, name string, market string, symbols []string, lookback int) *BarStrategy {
@@ -104,28 +103,36 @@ func (b *BarStrategy) getNCandles(c candle.Candle) error {
 }
 
 func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
-	b.Pools = []LiquidityPool{}
+	b.Pools = LiquidityPoolManager{}
 
 	prevDay := timestamp.AddDate(0, 0, -1)
 	asiaOpen :=  time.Date(prevDay.Year(), prevDay.Month(), prevDay.Day(), 20, 0, 0, 0, b.Location)
 	asiaClose :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 3, 0, 0, 0, b.Location)
-	asiaLow, err := b.getMinInRange(symbol, asiaOpen, asiaClose)
-	if err != nil {
-		log.Fatal(err)
-	}
-	asiaHigh, err := b.getMaxInRange(symbol, asiaOpen, asiaClose)
-	if err != nil {
-		log.Fatal(err)
-	}
+	asiaLow := b.getMinInRange(symbol, asiaOpen, asiaClose)
+	asiaHigh := b.getMaxInRange(symbol, asiaOpen, asiaClose)
+	londonOpen :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 3, 0, 0, 0, b.Location)
+	londonClose :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 7, 0, 0, 0, b.Location)
+	londonLow := b.getMinInRange(symbol, londonOpen, londonClose)
+	londonHigh := b.getMaxInRange(symbol, londonOpen, londonClose)
 	log.Printf("Asia low: %f on %s", asiaLow.Low, asiaLow.Timestamp.In(b.Location).Format(time.RFC3339))
 	log.Printf("Asia high: %f on %s", asiaHigh.High, asiaHigh.Timestamp.In(b.Location).Format(time.RFC3339))
+	log.Printf("London low: %f on %s", londonLow.Low, londonLow.Timestamp.In(b.Location).Format(time.RFC3339))
+	log.Printf("London high: %f on %s", londonHigh.High, londonHigh.Timestamp.In(b.Location).Format(time.RFC3339))
+
+	b.Pools.AddLP(LiquidityPool{Price: asiaLow.Low, Direction: Sellside, Candle: &asiaLow})
+	b.Pools.AddLP(LiquidityPool{Price: asiaHigh.High, Direction: Buyside, Candle: &asiaHigh})
+	b.Pools.AddLP(LiquidityPool{Price: londonLow.Low, Direction: Sellside, Candle: &londonLow})
+	b.Pools.AddLP(LiquidityPool{Price: londonHigh.High, Direction: Buyside, Candle: &londonHigh})
+
+	log.Printf("Active Pools: %v", b.Pools.GetPools(true))
+	log.Printf("Raides Pools: %v", b.Pools.GetPools(false))
 }
 
-func (b *BarStrategy) getMinInRange(symbol string, startTime time.Time, endTime time.Time) (candle.Candle, error) {
+func (b *BarStrategy) getMinInRange(symbol string, startTime time.Time, endTime time.Time) candle.Candle {
 	var low candle.Candle
 
 	if startTime.After(endTime) {
-		return candle.Candle{}, errors.New("startTime cannot be past endTime")
+		log.Fatal("startTime cannot be past endTime")
 	}
 	for ts := startTime; !ts.After(endTime); ts = ts.Add(time.Minute) {
 		ts = ts.UTC().Truncate(time.Minute)
@@ -136,14 +143,14 @@ func (b *BarStrategy) getMinInRange(symbol string, startTime time.Time, endTime 
 		}
 	}
 
-	return low, nil
+	return low
 }
 
-func (b *BarStrategy) getMaxInRange(symbol string, startTime time.Time, endTime time.Time) (candle.Candle, error) {
+func (b *BarStrategy) getMaxInRange(symbol string, startTime time.Time, endTime time.Time) candle.Candle {
 	var high candle.Candle
 
 	if startTime.After(endTime) {
-		return candle.Candle{}, errors.New("startTime cannot be past endTime")
+		log.Fatal("startTime cannot be past endTime")
 	}
 	for ts := startTime; !ts.After(endTime); ts = ts.Add(time.Minute) {
 		ts = ts.UTC().Truncate(time.Minute)
@@ -154,7 +161,7 @@ func (b *BarStrategy) getMaxInRange(symbol string, startTime time.Time, endTime 
 		}
 	}
 
-	return high, nil
+	return high
 }
 
 func (b *BarStrategy) hasCandlesForRange(symbol string, start time.Time, end time.Time) bool {
