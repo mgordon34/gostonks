@@ -41,10 +41,10 @@ func (lpm *LiquidityPoolManager) AddLP(lp LiquidityPool) {
 	lpm.activePools = append(lpm.activePools, lp)
 }
 
-func (lpm *LiquidityPoolManager) GetPools(lp LiquidityPool, wantRaided bool) []LiquidityPool {
-	if wantRaided {
-		return lpm.raidedPools
-	} else {
+func (lpm *LiquidityPoolManager) GetPools(isActive bool) []LiquidityPool {
+	if isActive {
 		return lpm.activePools
+	} else {
+		return lpm.raidedPools
 	}
 }
