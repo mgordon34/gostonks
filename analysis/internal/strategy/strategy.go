@@ -108,24 +108,33 @@ func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
 	prevDay := timestamp.AddDate(0, 0, -1)
 	asiaOpen :=  time.Date(prevDay.Year(), prevDay.Month(), prevDay.Day(), 20, 0, 0, 0, b.Location)
 	asiaClose :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 3, 0, 0, 0, b.Location)
-	asiaLow := b.getMinInRange(symbol, asiaOpen, asiaClose)
-	asiaHigh := b.getMaxInRange(symbol, asiaOpen, asiaClose)
 	londonOpen :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 3, 0, 0, 0, b.Location)
 	londonClose :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 7, 0, 0, 0, b.Location)
+	preMarketOpen :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 7, 0, 0, 0, b.Location)
+
+	asiaLow := b.getMinInRange(symbol, asiaOpen, asiaClose)
+	asiaHigh := b.getMaxInRange(symbol, asiaOpen, asiaClose)
 	londonLow := b.getMinInRange(symbol, londonOpen, londonClose)
 	londonHigh := b.getMaxInRange(symbol, londonOpen, londonClose)
+	preMarketLow := b.getMinInRange(symbol, preMarketOpen, timestamp)
+	preMarketHigh := b.getMaxInRange(symbol, preMarketOpen, timestamp)
+
 	log.Printf("Asia low: %f on %s", asiaLow.Low, asiaLow.Timestamp.In(b.Location).Format(time.RFC3339))
 	log.Printf("Asia high: %f on %s", asiaHigh.High, asiaHigh.Timestamp.In(b.Location).Format(time.RFC3339))
 	log.Printf("London low: %f on %s", londonLow.Low, londonLow.Timestamp.In(b.Location).Format(time.RFC3339))
 	log.Printf("London high: %f on %s", londonHigh.High, londonHigh.Timestamp.In(b.Location).Format(time.RFC3339))
+	log.Printf("Pre-Market low: %f on %s", preMarketLow.Low, preMarketLow.Timestamp.In(b.Location).Format(time.RFC3339))
+	log.Printf("Pre-Market high: %f on %s", preMarketHigh.High, preMarketHigh.Timestamp.In(b.Location).Format(time.RFC3339))
 
 	b.Pools.AddLP(LiquidityPool{Price: asiaLow.Low, Direction: Sellside, Candle: &asiaLow})
 	b.Pools.AddLP(LiquidityPool{Price: asiaHigh.High, Direction: Buyside, Candle: &asiaHigh})
 	b.Pools.AddLP(LiquidityPool{Price: londonLow.Low, Direction: Sellside, Candle: &londonLow})
 	b.Pools.AddLP(LiquidityPool{Price: londonHigh.High, Direction: Buyside, Candle: &londonHigh})
+	b.Pools.AddLP(LiquidityPool{Price: preMarketLow.Low, Direction: Sellside, Candle: &preMarketLow})
+	b.Pools.AddLP(LiquidityPool{Price: preMarketHigh.High, Direction: Buyside, Candle: &preMarketHigh})
 
-	log.Printf("Active Pools: %v", b.Pools.GetPools(true))
-	log.Printf("Raides Pools: %v", b.Pools.GetPools(false))
+	log.Printf("Active Pools: %v", b.Pools.GetPools(false))
+	log.Printf("Raided Pools: %v", b.Pools.GetPools(false))
 }
 
 func (b *BarStrategy) getMinInRange(symbol string, startTime time.Time, endTime time.Time) candle.Candle {
