@@ -109,13 +109,16 @@ func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
 	prevDay := timestamp.AddDate(0, 0, -1)
 	asiaOpen :=  time.Date(prevDay.Year(), prevDay.Month(), prevDay.Day(), 20, 0, 0, 0, b.Location)
 	asiaClose :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 3, 0, 0, 0, b.Location)
-	log.Printf("Asia open: %s", asiaOpen.Format(time.RFC3339))
-	log.Printf("Asia close: %s", asiaClose.Format(time.RFC3339))
 	asiaLow, err := b.getMinInRange(symbol, asiaOpen, asiaClose)
 	if err != nil {
 		log.Fatal(err)
 	}
+	asiaHigh, err := b.getMaxInRange(symbol, asiaOpen, asiaClose)
+	if err != nil {
+		log.Fatal(err)
+	}
 	log.Printf("Asia low: %f on %s", asiaLow.Low, asiaLow.Timestamp.In(b.Location).Format(time.RFC3339))
+	log.Printf("Asia high: %f on %s", asiaHigh.High, asiaHigh.Timestamp.In(b.Location).Format(time.RFC3339))
 }
 
 func (b *BarStrategy) getMinInRange(symbol string, startTime time.Time, endTime time.Time) (candle.Candle, error) {
@@ -134,6 +137,24 @@ func (b *BarStrategy) getMinInRange(symbol string, startTime time.Time, endTime 
 	}
 
 	return low, nil
+}
+
+func (b *BarStrategy) getMaxInRange(symbol string, startTime time.Time, endTime time.Time) (candle.Candle, error) {
+	var high candle.Candle
+
+	if startTime.After(endTime) {
+		return candle.Candle{}, errors.New("startTime cannot be past endTime")
+	}
+	for ts := startTime; !ts.After(endTime); ts = ts.Add(time.Minute) {
+		ts = ts.UTC().Truncate(time.Minute)
+		c := b.Bars[symbol][ts]
+
+		if high.High == 0.0 || c.High < high.High {
+			high = c
+		}
+	}
+
+	return high, nil
 }
 
 func (b *BarStrategy) hasCandlesForRange(symbol string, start time.Time, end time.Time) bool {
