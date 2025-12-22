@@ -27,16 +27,28 @@ type LiquidityPoolManager struct {
 	raidedPools []LiquidityPool
 }
 
-func (lpm *LiquidityPoolManager) AddLP(lp LiquidityPool) {
+func (lpm *LiquidityPoolManager) UpdateLPs(candle candle.Candle) {
 	for i := len(lpm.activePools) - 1; i >= 0; i-- {
 		curPool := lpm.activePools[i]
-		if (curPool.Direction == Buyside && lp.Price >= curPool.Price) || (curPool.Direction == Sellside && lp.Price <= curPool.Price) {
+		if curPool.Direction == Buyside && candle.High >= curPool.Price {
+
 			lpm.activePools = append(lpm.activePools[:i], lpm.activePools[i+1:]...)
 
-			curPool.timeRaided = lp.Candle.Timestamp
+			curPool.timeRaided = candle.Timestamp
+			lpm.raidedPools = append(lpm.raidedPools, curPool)
+
+		} else if curPool.Direction == Sellside && candle.Low <= curPool.Price {
+
+			lpm.activePools = append(lpm.activePools[:i], lpm.activePools[i+1:]...)
+
+			curPool.timeRaided = candle.Timestamp
 			lpm.raidedPools = append(lpm.raidedPools, curPool)
 		}
 	}
+}
+
+func (lpm *LiquidityPoolManager) AddLP(lp LiquidityPool) {
+	lpm.UpdateLPs(*lp.Candle)
 
 	lpm.activePools = append(lpm.activePools, lp)
 }

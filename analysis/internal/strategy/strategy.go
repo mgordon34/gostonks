@@ -65,6 +65,8 @@ func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 				log.Printf("Candle at 09:30 America/New_York for %s: %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
 				b.initializeDay(c.Symbol, c.Timestamp)
 			}
+
+			b.Pools.UpdateLPs(c)
 		}
 	}
 }
@@ -118,13 +120,6 @@ func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
 	londonHigh := b.getMaxInRange(symbol, londonOpen, londonClose)
 	preMarketLow := b.getMinInRange(symbol, preMarketOpen, timestamp)
 	preMarketHigh := b.getMaxInRange(symbol, preMarketOpen, timestamp)
-
-	log.Printf("Asia low: %f on %s", asiaLow.Low, asiaLow.Timestamp.In(b.Location).Format(time.RFC3339))
-	log.Printf("Asia high: %f on %s", asiaHigh.High, asiaHigh.Timestamp.In(b.Location).Format(time.RFC3339))
-	log.Printf("London low: %f on %s", londonLow.Low, londonLow.Timestamp.In(b.Location).Format(time.RFC3339))
-	log.Printf("London high: %f on %s", londonHigh.High, londonHigh.Timestamp.In(b.Location).Format(time.RFC3339))
-	log.Printf("Pre-Market low: %f on %s", preMarketLow.Low, preMarketLow.Timestamp.In(b.Location).Format(time.RFC3339))
-	log.Printf("Pre-Market high: %f on %s", preMarketHigh.High, preMarketHigh.Timestamp.In(b.Location).Format(time.RFC3339))
 
 	b.Pools.AddLP(LiquidityPool{Price: asiaLow.Low, Direction: Sellside, Candle: &asiaLow})
 	b.Pools.AddLP(LiquidityPool{Price: asiaHigh.High, Direction: Buyside, Candle: &asiaHigh})
