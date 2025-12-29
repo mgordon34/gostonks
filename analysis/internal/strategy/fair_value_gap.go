@@ -2,6 +2,7 @@ package strategy
 
 import (
 	"log"
+	"math"
 	"time"
 
 	"github.com/mgordon34/gostonks/market/cmd/candle"
@@ -31,14 +32,16 @@ type GapManager struct {
 	gaps		[]FairValueGap
 }
 
-func (gm *GapManager) ProcessCandle(candle candle.Candle) {
-	gm.candles = append(gm.candles, candle)
+func (gm *GapManager) ProcessCandle(c candle.Candle) {
+	gm.candles = append(gm.candles, c)
 	if len(gm.candles) > 3 {
 		gm.candles = gm.candles[1:]
 		gm.addGapIfExists()
 	}
 
-	// gm.updateGaps()
+	for _, gap := range gm.gaps {
+		gap.processCandle(&c)
+	}
 }
 
 func (gm *GapManager) addGapIfExists() {
@@ -73,19 +76,33 @@ func (gm *GapManager) addGapIfExists() {
 	}
 }
 
-func (gm *GapManager) updateGaps() {
-	// check if gaps have been filled / inversed
-	// lastCandle = candles[2]
-	for i := len(gm.gaps) - 1; i >= 0; i-- {
-		curGap := gm.gaps[i]
-		switch curGap.State {
-		case GapOpen:
-			if curGap.Direction == Buyside {
+func (gap *FairValueGap) processCandle(c *candle.Candle) {
+	if gap.State == GapInversed {
+		return 
+	}
 
+	switch gap.Direction {
+	case Buyside:
+		if c.Low < gap.UnfilledPrice {
+			gap.UnfilledPrice = math.Max(c.Low, gap.EndPrice)
+			if c.Close < gap.UnfilledPrice {
+				gap.State = GapInversed
+				log.Printf("FvG inversed at %s: %+v", gap.Candle.Timestamp.Format(time.RFC3339), gap)
+			} else {
+				gap.State = GapPartiallyFilled
 			}
-		case GapPartiallyFilled:
-		case GapFilled:
-		case GapInversed:
+			gap.LastAffectedCandle = c
+		}
+	case Sellside:
+		if c.High > gap.UnfilledPrice {
+			gap.UnfilledPrice = math.Min(c.High, gap.EndPrice)
+			if c.Close > gap.UnfilledPrice {
+				gap.State = GapInversed
+				log.Printf("FvG inversed at %s: %+v", gap.Candle.Timestamp.Format(time.RFC3339), gap)
+			} else {
+				gap.State = GapPartiallyFilled
+			}
+			gap.LastAffectedCandle = c
 		}
 	}
 }
