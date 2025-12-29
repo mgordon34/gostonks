@@ -2,6 +2,7 @@ package strategy
 
 import (
 	"log"
+	"time"
 
 	"github.com/mgordon34/gostonks/market/cmd/candle"
 )
@@ -37,7 +38,7 @@ func (gm *GapManager) ProcessCandle(candle candle.Candle) {
 		gm.addGapIfExists()
 	}
 
-	gm.updateGaps()
+	// gm.updateGaps()
 }
 
 func (gm *GapManager) addGapIfExists() {
@@ -55,6 +56,7 @@ func (gm *GapManager) addGapIfExists() {
 			LastAffectedCandle: &gm.candles[1],
 			State: GapOpen,
 		}
+		// log.Printf("Adding FvG at %s: %+v", gap.Candle.Timestamp.Format(time.RFC3339), gap)
 		gm.gaps = append(gm.gaps, gap)
 	} else if gm.candles[0].Low > gm.candles[2].High {
 		gap := FairValueGap{
@@ -66,6 +68,7 @@ func (gm *GapManager) addGapIfExists() {
 			LastAffectedCandle: &gm.candles[1],
 			State: GapOpen,
 		}
+		// log.Printf("Adding FvG at %s: %+v", gap.Candle.Timestamp.Format(time.RFC3339), gap)
 		gm.gaps = append(gm.gaps, gap)
 	}
 }

@@ -25,6 +25,7 @@ type BarStrategy struct {
 
 	Location 	*time.Location
 	Pools	 	LiquidityPoolManager
+	Gaps   		GapManager
 }
 
 func NewBarStrategy(ctx context.Context, repo candle.Repository, name string, market string, symbols []string, lookback int) *BarStrategy {
@@ -67,6 +68,7 @@ func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 			}
 
 			b.Pools.UpdateLPs(c)
+			b.Gaps.ProcessCandle(c)
 		}
 	}
 }
@@ -106,6 +108,7 @@ func (b *BarStrategy) getNCandles(c candle.Candle) error {
 
 func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
 	b.Pools = LiquidityPoolManager{}
+	b.Gaps = GapManager{}
 
 	prevDay := timestamp.AddDate(0, 0, -1)
 	asiaOpen :=  time.Date(prevDay.Year(), prevDay.Month(), prevDay.Day(), 20, 0, 0, 0, b.Location)
