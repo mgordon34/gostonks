@@ -31,6 +31,15 @@ func (gap *FairValueGap) Age(c *candle.Candle) (int, error) {
 	return gap.Candle.Age(c)
 }
 
+func (gap *FairValueGap) Width() int {
+	width, err := gap.Candle.Age(gap.LastAffectedCandle)
+	if err != nil {
+		log.Fatalf("Invalid width result %v", err)
+	}
+
+	return width
+}
+
 func (gap *FairValueGap) processCandle(c *candle.Candle) {
 	if gap.State == GapInversed {
 		return 
@@ -117,4 +126,31 @@ func (gm *GapManager) addGapIfExists() {
 		// log.Printf("Adding FvG at %s: %+v", gap.Candle.Timestamp.Format(time.RFC3339), gap)
 		gm.gaps = append(gm.gaps, gap)
 	}
+}
+
+func (gm * GapManager) GetInverses(c *candle.Candle, maxAge int, maxWidth int) ([]FairValueGap, error) {
+	if maxAge < 0 {
+		maxAge = math.MaxInt
+	}
+	if maxWidth < 0 {
+		maxWidth = math.MaxInt
+	}
+
+	var gaps []FairValueGap
+	for _, gap := range gm.gaps {
+		if gap.State != GapInversed {
+			continue
+		}
+		age, err := gap.LastAffectedCandle.Age(c)
+		if err != nil {
+			return gaps, err
+		}
+		width := gap.Width()
+
+		if age <= maxAge && width <= maxWidth {
+			gaps = append(gaps, gap)
+		}
+	}
+
+	return gaps, nil
 }
