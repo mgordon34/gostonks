@@ -27,6 +27,49 @@ type FairValueGap struct {
 	LastAffectedCandle 	*candle.Candle
 }
 
+func (gap *FairValueGap) Age(c *candle.Candle) (int, error) {
+	return gap.Candle.Age(c)
+}
+
+func (gap *FairValueGap) processCandle(c *candle.Candle) {
+	if gap.State == GapInversed {
+		return 
+	}
+
+	switch gap.Direction {
+	case Buyside:
+		if c.Low < gap.UnfilledPrice {
+			gap.UnfilledPrice = math.Max(c.Low, gap.EndPrice)
+			if c.Close < gap.StartPrice {
+				gap.State = GapInversed
+				age, err := gap.Age(c)
+				if err != nil {
+					log.Fatalf("Found invalid age: %v", err)
+				}
+				log.Printf("%s FvG inversed at %s with age of %d", gap.Candle.Timestamp.Format(time.RFC3339), c.Timestamp.Format(time.RFC3339), age)
+			} else {
+				gap.State = GapPartiallyFilled
+			}
+			gap.LastAffectedCandle = c
+		}
+	case Sellside:
+		if c.High > gap.UnfilledPrice {
+			gap.UnfilledPrice = math.Min(c.High, gap.EndPrice)
+			if c.Close > gap.StartPrice {
+				gap.State = GapInversed
+				age, err := gap.Age(c)
+				if err != nil {
+					log.Fatalf("Found invalid age: %v", err)
+				}
+				log.Printf("%s FvG inversed at %s with age of %d", gap.Candle.Timestamp.Format(time.RFC3339), c.Timestamp.Format(time.RFC3339), age)
+			} else {
+				gap.State = GapPartiallyFilled
+			}
+			gap.LastAffectedCandle = c
+		}
+	}
+}
+
 type GapManager struct {
 	candles  	[]candle.Candle
 	gaps		[]FairValueGap
@@ -73,36 +116,5 @@ func (gm *GapManager) addGapIfExists() {
 		}
 		// log.Printf("Adding FvG at %s: %+v", gap.Candle.Timestamp.Format(time.RFC3339), gap)
 		gm.gaps = append(gm.gaps, gap)
-	}
-}
-
-func (gap *FairValueGap) processCandle(c *candle.Candle) {
-	if gap.State == GapInversed {
-		return 
-	}
-
-	switch gap.Direction {
-	case Buyside:
-		if c.Low < gap.UnfilledPrice {
-			gap.UnfilledPrice = math.Max(c.Low, gap.EndPrice)
-			if c.Close < gap.StartPrice {
-				gap.State = GapInversed
-				log.Printf("%s FvG inversed at %s", gap.Candle.Timestamp.Format(time.RFC3339), c.Timestamp.Format(time.RFC3339))
-			} else {
-				gap.State = GapPartiallyFilled
-			}
-			gap.LastAffectedCandle = c
-		}
-	case Sellside:
-		if c.High > gap.UnfilledPrice {
-			gap.UnfilledPrice = math.Min(c.High, gap.EndPrice)
-			if c.Close > gap.StartPrice {
-				gap.State = GapInversed
-				log.Printf("%s FvG inversed at %s", gap.Candle.Timestamp.Format(time.RFC3339), c.Timestamp.Format(time.RFC3339))
-			} else {
-				gap.State = GapPartiallyFilled
-			}
-			gap.LastAffectedCandle = c
-		}
 	}
 }
