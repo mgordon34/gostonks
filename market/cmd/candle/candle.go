@@ -2,6 +2,7 @@ package candle
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -21,6 +22,14 @@ type Candle struct {
 	Volume    int       `db:"volume"`
 	Timestamp time.Time `db:"timestamp"`
 }
+func (c *Candle) Age(other *Candle) (int, error) {
+	if c.Timestamp.After(other.Timestamp) {
+		return -1, fmt.Errorf("FairValueGap timestamp %s is after candle timestamp %s", c.Timestamp.Format(time.RFC3339), other.Timestamp.Format(time.RFC3339))
+	}
+
+	return int(other.Timestamp.Sub(c.Timestamp).Minutes()), nil
+}
+
 
 type Repository interface {
 	GetCandles(ctx context.Context, market string, symbol string, timeframe string, startTime time.Time, endTime time.Time) []Candle
