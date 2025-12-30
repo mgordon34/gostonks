@@ -77,6 +77,13 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) {
 	for _, symbol := range b.Symbols {
 		if c.Symbol == symbol {
 			// log.Printf("Generating signals for %s", symbol)
+			inverses, err := b.Gaps.GetInverses(&c, 0, 20)
+			if err != nil {
+				log.Fatalf("Error getting inverses: %v", err)
+			}
+			if len(inverses) > 0 {
+				log.Printf("%d Inverses: %+v", len(inverses), inverses)
+			}
 		}
 	}
 }
