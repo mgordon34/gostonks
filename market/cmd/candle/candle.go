@@ -23,7 +23,7 @@ type Candle struct {
 	Timestamp time.Time `db:"timestamp"`
 }
 func (c *Candle) Age(other *Candle) (int, error) {
-	if c.Timestamp.After(other.Timestamp) {
+	if other.Timestamp.Before(c.Timestamp) {
 		return -1, fmt.Errorf("FairValueGap timestamp %s is after candle timestamp %s", c.Timestamp.Format(time.RFC3339), other.Timestamp.Format(time.RFC3339))
 	}
 
