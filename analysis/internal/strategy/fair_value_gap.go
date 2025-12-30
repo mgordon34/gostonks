@@ -39,8 +39,8 @@ func (gm *GapManager) ProcessCandle(c candle.Candle) {
 		gm.addGapIfExists()
 	}
 
-	for _, gap := range gm.gaps {
-		gap.processCandle(&c)
+	for i := range gm.gaps {
+      gm.gaps[i].processCandle(&c)
 	}
 }
 
@@ -85,9 +85,9 @@ func (gap *FairValueGap) processCandle(c *candle.Candle) {
 	case Buyside:
 		if c.Low < gap.UnfilledPrice {
 			gap.UnfilledPrice = math.Max(c.Low, gap.EndPrice)
-			if c.Close < gap.UnfilledPrice {
+			if c.Close < gap.StartPrice {
 				gap.State = GapInversed
-				log.Printf("FvG inversed at %s: %+v", gap.Candle.Timestamp.Format(time.RFC3339), gap)
+				log.Printf("%s FvG inversed at %s", gap.Candle.Timestamp.Format(time.RFC3339), c.Timestamp.Format(time.RFC3339))
 			} else {
 				gap.State = GapPartiallyFilled
 			}
@@ -96,9 +96,9 @@ func (gap *FairValueGap) processCandle(c *candle.Candle) {
 	case Sellside:
 		if c.High > gap.UnfilledPrice {
 			gap.UnfilledPrice = math.Min(c.High, gap.EndPrice)
-			if c.Close > gap.UnfilledPrice {
+			if c.Close > gap.StartPrice {
 				gap.State = GapInversed
-				log.Printf("FvG inversed at %s: %+v", gap.Candle.Timestamp.Format(time.RFC3339), gap)
+				log.Printf("%s FvG inversed at %s", gap.Candle.Timestamp.Format(time.RFC3339), c.Timestamp.Format(time.RFC3339))
 			} else {
 				gap.State = GapPartiallyFilled
 			}
