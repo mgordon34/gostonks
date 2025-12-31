@@ -12,6 +12,7 @@ type LiquidityPool struct {
 	Candle 		*candle.Candle
 
 	timeRaided	time.Time
+	RaidCandle	*candle.Candle
 }
 
 func (lp *LiquidityPool) BeenRaided() bool {
@@ -20,6 +21,7 @@ func (lp *LiquidityPool) BeenRaided() bool {
 
 func (lp *LiquidityPool) SetRaided(c candle.Candle) {
 	lp.timeRaided = c.Timestamp
+	lp.RaidCandle = &c
 }
 
 type LiquidityPoolManager struct {
@@ -34,14 +36,14 @@ func (lpm *LiquidityPoolManager) UpdateLPs(candle candle.Candle) {
 
 			lpm.activePools = append(lpm.activePools[:i], lpm.activePools[i+1:]...)
 
-			curPool.timeRaided = candle.Timestamp
+			curPool.SetRaided(candle)
 			lpm.raidedPools = append(lpm.raidedPools, curPool)
 
 		} else if curPool.Direction == Sellside && candle.Low <= curPool.Price {
 
 			lpm.activePools = append(lpm.activePools[:i], lpm.activePools[i+1:]...)
 
-			curPool.timeRaided = candle.Timestamp
+			curPool.SetRaided(candle)
 			lpm.raidedPools = append(lpm.raidedPools, curPool)
 		}
 	}
