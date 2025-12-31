@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"github.com/mgordon34/gostonks/market/cmd/candle"
@@ -82,6 +83,28 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) {
 			}
 			if len(inverses) > 0 {
 				log.Printf("%d Inverses: %+v", len(inverses), inverses)
+			}
+
+			raids := b.Pools.GetPools(false)
+			if len(raids) == 0 {
+				continue
+			}
+
+			for _, raid := range raids {
+				raidAge, err := raid.RaidCandle.Age(&c)
+				if err != nil {
+					log.Fatalf("Error getting raid age: %v", err)
+				}
+				raidWidth, err := raid.Candle.Age(raid.RaidCandle)
+				if err != nil {
+					log.Fatalf("Error getting raid width: %v", err)
+				}
+
+				if raidAge > 10 || raidWidth > math.MaxInt {
+					continue
+				}
+
+				log.Printf("[%s]In probable raid window, looking for inverses", c.Timestamp.Format(time.RFC3339))
 			}
 		}
 	}
