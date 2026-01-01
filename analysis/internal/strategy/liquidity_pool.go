@@ -10,6 +10,7 @@ type LiquidityPool struct {
 	Price 		float64
 	Direction 	Direction
 	Candle 		*candle.Candle
+	Name		string
 
 	timeRaided	time.Time
 	RaidCandle	*candle.Candle
