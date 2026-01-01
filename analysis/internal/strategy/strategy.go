@@ -145,9 +145,29 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) {
 			}
 			for _, inverse := range inverses {
 				if raid.Direction == Buyside && inverse.Direction == Buyside && c.Close < raid.Price {
-					log.Printf("[%s]Buyside raid and buyside inversed, SELL", c.Timestamp.Format(time.RFC3339))
+					sl := b.getMaxInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).High
+					signal := Signal{
+						Action: SellAction,
+						Type: MarketOrder,
+						Price: c.Close,
+						TakeProfit: c.Close - (sl - c.Close) * 1,
+						StopLoss: sl,
+						Timestamp: c.Timestamp,
+						CancelTime: c.Timestamp.Add(120 * time.Minute),
+					}
+					b.SendSignal(signal)
 				} else if raid.Direction == Sellside && inverse.Direction == Sellside  && c.Close > raid.Price {
-					log.Printf("[%s]Sellside raid and buyside inversed, BUY", c.Timestamp.Format(time.RFC3339))
+					sl := b.getMinInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).Low
+					signal := Signal{
+						Action: BuyAction,
+						Type: MarketOrder,
+						Price: c.Close,
+						TakeProfit: c.Close + (c.Close - sl) * 1,
+						StopLoss: sl,
+						Timestamp: c.Timestamp,
+						CancelTime: c.Timestamp.Add(120 * time.Minute),
+					}
+					b.SendSignal(signal)
 				}
 			}
 		}
@@ -203,7 +223,7 @@ func (b *BarStrategy) getMaxInRange(symbol string, startTime time.Time, endTime 
 	if startTime.After(endTime) {
 		log.Fatal("startTime cannot be past endTime")
 	}
-	for ts := startTime; ts.Before(endTime); ts = ts.Add(time.Minute) {
+	for ts := startTime; !ts.After(endTime); ts = ts.Add(time.Minute) {
 		ts = ts.UTC().Truncate(time.Minute)
 		c := b.Bars[symbol][ts]
 
@@ -213,6 +233,10 @@ func (b *BarStrategy) getMaxInRange(symbol string, startTime time.Time, endTime 
 	}
 
 	return high
+}
+
+func (b *BarStrategy) SendSignal(signal Signal) {
+	log.Printf("[%s]Sending signal: %+v", signal.Timestamp.In(b.Location).Format(time.RFC3339),signal)
 }
 
 func (b *BarStrategy) hasCandlesForRange(symbol string, start time.Time, end time.Time) bool {
