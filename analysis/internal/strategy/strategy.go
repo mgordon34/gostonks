@@ -153,14 +153,14 @@ func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
 	preMarketLow := b.getMinInRange(symbol, preMarketOpen, timestamp)
 	preMarketHigh := b.getMaxInRange(symbol, preMarketOpen, timestamp)
 
-	b.Pools.AddLP(LiquidityPool{Price: asiaLow.Low, Direction: Sellside, Candle: &asiaLow})
-	b.Pools.AddLP(LiquidityPool{Price: asiaHigh.High, Direction: Buyside, Candle: &asiaHigh})
-	b.Pools.AddLP(LiquidityPool{Price: londonLow.Low, Direction: Sellside, Candle: &londonLow})
-	b.Pools.AddLP(LiquidityPool{Price: londonHigh.High, Direction: Buyside, Candle: &londonHigh})
-	b.Pools.AddLP(LiquidityPool{Price: preMarketLow.Low, Direction: Sellside, Candle: &preMarketLow})
-	b.Pools.AddLP(LiquidityPool{Price: preMarketHigh.High, Direction: Buyside, Candle: &preMarketHigh})
+	b.Pools.AddLP(LiquidityPool{Price: asiaLow.Low, Direction: Sellside, Candle: &asiaLow, Name: "Asia Low"})
+	b.Pools.AddLP(LiquidityPool{Price: asiaHigh.High, Direction: Buyside, Candle: &asiaHigh, Name: "Asia High"})
+	b.Pools.AddLP(LiquidityPool{Price: londonLow.Low, Direction: Sellside, Candle: &londonLow, Name: "London Low"})
+	b.Pools.AddLP(LiquidityPool{Price: londonHigh.High, Direction: Buyside, Candle: &londonHigh, Name: "London High"})
+	b.Pools.AddLP(LiquidityPool{Price: preMarketLow.Low, Direction: Sellside, Candle: &preMarketLow, Name: "Pre Market Low"})
+	b.Pools.AddLP(LiquidityPool{Price: preMarketHigh.High, Direction: Buyside, Candle: &preMarketHigh, Name: "Pre Market High"})
 
-	log.Printf("Active Pools: %v", b.Pools.GetPools(false))
+	log.Printf("Active Pools: %v", b.Pools.GetPools(true))
 	log.Printf("Raided Pools: %v", b.Pools.GetPools(false))
 }
 
@@ -188,11 +188,11 @@ func (b *BarStrategy) getMaxInRange(symbol string, startTime time.Time, endTime 
 	if startTime.After(endTime) {
 		log.Fatal("startTime cannot be past endTime")
 	}
-	for ts := startTime; !ts.After(endTime); ts = ts.Add(time.Minute) {
+	for ts := startTime; ts.Before(endTime); ts = ts.Add(time.Minute) {
 		ts = ts.UTC().Truncate(time.Minute)
 		c := b.Bars[symbol][ts]
 
-		if high.High == 0.0 || c.High < high.High {
+		if high.High == 0.0 || c.High > high.High {
 			high = c
 		}
 	}
