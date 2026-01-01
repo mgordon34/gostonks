@@ -108,11 +108,11 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) {
 		if c.Symbol != symbol {
 			continue
 		}
+
 		tsNY := c.Timestamp.In(b.Location)
 		startTime := time.Date(tsNY.Year(), tsNY.Month(), tsNY.Day(), 9, 30, 0, 0, b.Location)
 		endTime := time.Date(tsNY.Year(), tsNY.Month(), tsNY.Day(), 16, 00, 0, 0, b.Location)
 		if tsNY.Before(startTime) || !tsNY.Before(endTime) {
-			log.Printf("%s is out of 9:30 to 16:00 window", tsNY.Format(time.RFC3339))
 			continue
 		}
 
@@ -120,6 +120,11 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) {
 		if len(raids) == 0 {
 			continue
 		}
+		inverses, err := b.Gaps.GetInverses(&c, 0, 20)
+		if err != nil {
+			log.Fatalf("Error getting inverses: %v", err)
+		}
+
 		for _, raid := range raids {
 			raidAge, err := raid.RaidCandle.Age(&c)
 			if err != nil {
@@ -134,13 +139,16 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) {
 				continue
 			}
 
-			log.Printf("[%s]In probable raid window, looking for inverses", c.Timestamp.Format(time.RFC3339))
-			inverses, err := b.Gaps.GetInverses(&c, 0, 20)
-			if err != nil {
-				log.Fatalf("Error getting inverses: %v", err)
+			// In probable raid window, looking for inverses
+			if len(inverses) == 0 {
+				continue
 			}
-			if len(inverses) > 0 {
-				log.Printf("%d Inverses: %+v", len(inverses), inverses)
+			for _, inverse := range inverses {
+				if raid.Direction == Buyside && inverse.Direction == Buyside && c.Close < raid.Price {
+					log.Printf("[%s]Buyside raid and buyside inversed, SELL", c.Timestamp.Format(time.RFC3339))
+				} else if raid.Direction == Sellside && inverse.Direction == Sellside  && c.Close > raid.Price {
+					log.Printf("[%s]Sellside raid and buyside inversed, BUY", c.Timestamp.Format(time.RFC3339))
+				}
 			}
 		}
 	}
