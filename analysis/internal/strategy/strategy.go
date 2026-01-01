@@ -47,6 +47,35 @@ func NewBarStrategy(ctx context.Context, repo candle.Repository, name string, ma
 	}
 }
 
+func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
+	b.Pools = LiquidityPoolManager{}
+	b.Gaps = GapManager{}
+
+	prevDay := timestamp.AddDate(0, 0, -1)
+	asiaOpen :=  time.Date(prevDay.Year(), prevDay.Month(), prevDay.Day(), 20, 0, 0, 0, b.Location)
+	asiaClose :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 3, 0, 0, 0, b.Location)
+	londonOpen :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 3, 0, 0, 0, b.Location)
+	londonClose :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 7, 0, 0, 0, b.Location)
+	preMarketOpen :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 7, 0, 0, 0, b.Location)
+
+	asiaLow := b.getMinInRange(symbol, asiaOpen, asiaClose)
+	asiaHigh := b.getMaxInRange(symbol, asiaOpen, asiaClose)
+	londonLow := b.getMinInRange(symbol, londonOpen, londonClose)
+	londonHigh := b.getMaxInRange(symbol, londonOpen, londonClose)
+	preMarketLow := b.getMinInRange(symbol, preMarketOpen, timestamp)
+	preMarketHigh := b.getMaxInRange(symbol, preMarketOpen, timestamp)
+
+	b.Pools.AddLP(LiquidityPool{Price: asiaLow.Low, Direction: Sellside, Candle: &asiaLow, Name: "Asia Low"})
+	b.Pools.AddLP(LiquidityPool{Price: asiaHigh.High, Direction: Buyside, Candle: &asiaHigh, Name: "Asia High"})
+	b.Pools.AddLP(LiquidityPool{Price: londonLow.Low, Direction: Sellside, Candle: &londonLow, Name: "London Low"})
+	b.Pools.AddLP(LiquidityPool{Price: londonHigh.High, Direction: Buyside, Candle: &londonHigh, Name: "London High"})
+	b.Pools.AddLP(LiquidityPool{Price: preMarketLow.Low, Direction: Sellside, Candle: &preMarketLow, Name: "Pre Market Low"})
+	b.Pools.AddLP(LiquidityPool{Price: preMarketHigh.High, Direction: Buyside, Candle: &preMarketHigh, Name: "Pre Market High"})
+
+	log.Printf("Active Pools: %v", b.Pools.GetPools(true))
+	log.Printf("Raided Pools: %v", b.Pools.GetPools(false))
+}
+
 func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 	for _, symbol := range b.Symbols {
 		if c.Symbol == symbol {
@@ -76,35 +105,42 @@ func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 
 func (b *BarStrategy) GenerateSignal(c candle.Candle) {
 	for _, symbol := range b.Symbols {
-		if c.Symbol == symbol {
+		if c.Symbol != symbol {
+			continue
+		}
+		tsNY := c.Timestamp.In(b.Location)
+		startTime := time.Date(tsNY.Year(), tsNY.Month(), tsNY.Day(), 9, 30, 0, 0, b.Location)
+		endTime := time.Date(tsNY.Year(), tsNY.Month(), tsNY.Day(), 16, 00, 0, 0, b.Location)
+		if tsNY.Before(startTime) || !tsNY.Before(endTime) {
+			log.Printf("%s is out of 9:30 to 16:00 window", tsNY.Format(time.RFC3339))
+			continue
+		}
+
+		raids := b.Pools.GetPools(false)
+		if len(raids) == 0 {
+			continue
+		}
+		for _, raid := range raids {
+			raidAge, err := raid.RaidCandle.Age(&c)
+			if err != nil {
+				log.Fatalf("Error getting raid age: %v", err)
+			}
+			raidWidth, err := raid.Candle.Age(raid.RaidCandle)
+			if err != nil {
+				log.Fatalf("Error getting raid width: %v", err)
+			}
+
+			if raidAge > 10 || raidWidth > math.MaxInt {
+				continue
+			}
+
+			log.Printf("[%s]In probable raid window, looking for inverses", c.Timestamp.Format(time.RFC3339))
 			inverses, err := b.Gaps.GetInverses(&c, 0, 20)
 			if err != nil {
 				log.Fatalf("Error getting inverses: %v", err)
 			}
 			if len(inverses) > 0 {
 				log.Printf("%d Inverses: %+v", len(inverses), inverses)
-			}
-
-			raids := b.Pools.GetPools(false)
-			if len(raids) == 0 {
-				continue
-			}
-
-			for _, raid := range raids {
-				raidAge, err := raid.RaidCandle.Age(&c)
-				if err != nil {
-					log.Fatalf("Error getting raid age: %v", err)
-				}
-				raidWidth, err := raid.Candle.Age(raid.RaidCandle)
-				if err != nil {
-					log.Fatalf("Error getting raid width: %v", err)
-				}
-
-				if raidAge > 10 || raidWidth > math.MaxInt {
-					continue
-				}
-
-				log.Printf("[%s]In probable raid window, looking for inverses", c.Timestamp.Format(time.RFC3339))
 			}
 		}
 	}
@@ -133,35 +169,6 @@ func (b *BarStrategy) getNCandles(c candle.Candle) error {
 	}
 
 	return nil
-}
-
-func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
-	b.Pools = LiquidityPoolManager{}
-	b.Gaps = GapManager{}
-
-	prevDay := timestamp.AddDate(0, 0, -1)
-	asiaOpen :=  time.Date(prevDay.Year(), prevDay.Month(), prevDay.Day(), 20, 0, 0, 0, b.Location)
-	asiaClose :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 3, 0, 0, 0, b.Location)
-	londonOpen :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 3, 0, 0, 0, b.Location)
-	londonClose :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 7, 0, 0, 0, b.Location)
-	preMarketOpen :=  time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 7, 0, 0, 0, b.Location)
-
-	asiaLow := b.getMinInRange(symbol, asiaOpen, asiaClose)
-	asiaHigh := b.getMaxInRange(symbol, asiaOpen, asiaClose)
-	londonLow := b.getMinInRange(symbol, londonOpen, londonClose)
-	londonHigh := b.getMaxInRange(symbol, londonOpen, londonClose)
-	preMarketLow := b.getMinInRange(symbol, preMarketOpen, timestamp)
-	preMarketHigh := b.getMaxInRange(symbol, preMarketOpen, timestamp)
-
-	b.Pools.AddLP(LiquidityPool{Price: asiaLow.Low, Direction: Sellside, Candle: &asiaLow, Name: "Asia Low"})
-	b.Pools.AddLP(LiquidityPool{Price: asiaHigh.High, Direction: Buyside, Candle: &asiaHigh, Name: "Asia High"})
-	b.Pools.AddLP(LiquidityPool{Price: londonLow.Low, Direction: Sellside, Candle: &londonLow, Name: "London Low"})
-	b.Pools.AddLP(LiquidityPool{Price: londonHigh.High, Direction: Buyside, Candle: &londonHigh, Name: "London High"})
-	b.Pools.AddLP(LiquidityPool{Price: preMarketLow.Low, Direction: Sellside, Candle: &preMarketLow, Name: "Pre Market Low"})
-	b.Pools.AddLP(LiquidityPool{Price: preMarketHigh.High, Direction: Buyside, Candle: &preMarketHigh, Name: "Pre Market High"})
-
-	log.Printf("Active Pools: %v", b.Pools.GetPools(true))
-	log.Printf("Raided Pools: %v", b.Pools.GetPools(false))
 }
 
 func (b *BarStrategy) getMinInRange(symbol string, startTime time.Time, endTime time.Time) candle.Candle {
