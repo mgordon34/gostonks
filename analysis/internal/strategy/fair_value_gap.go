@@ -3,7 +3,6 @@ package strategy
 import (
 	"log"
 	"math"
-	"time"
 
 	"github.com/mgordon34/gostonks/market/cmd/candle"
 )
@@ -51,11 +50,6 @@ func (gap *FairValueGap) processCandle(c *candle.Candle) {
 			gap.UnfilledPrice = math.Max(c.Low, gap.EndPrice)
 			if c.Close < gap.StartPrice {
 				gap.State = GapInversed
-				age, err := gap.Age(c)
-				if err != nil {
-					log.Fatalf("Found invalid age: %v", err)
-				}
-				log.Printf("%s FvG inversed at %s with age of %d", gap.Candle.Timestamp.Format(time.RFC3339), c.Timestamp.Format(time.RFC3339), age)
 			} else {
 				gap.State = GapPartiallyFilled
 			}
@@ -66,11 +60,6 @@ func (gap *FairValueGap) processCandle(c *candle.Candle) {
 			gap.UnfilledPrice = math.Min(c.High, gap.EndPrice)
 			if c.Close > gap.StartPrice {
 				gap.State = GapInversed
-				age, err := gap.Age(c)
-				if err != nil {
-					log.Fatalf("Found invalid age: %v", err)
-				}
-				log.Printf("%s FvG inversed at %s with age of %d", gap.Candle.Timestamp.Format(time.RFC3339), c.Timestamp.Format(time.RFC3339), age)
 			} else {
 				gap.State = GapPartiallyFilled
 			}
