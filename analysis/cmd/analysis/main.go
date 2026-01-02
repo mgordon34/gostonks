@@ -60,7 +60,11 @@ func main() {
 
 			for _, strategy := range strategies {
 				strategy.ProcessCandle(c)
-				strategy.GenerateSignal(c)
+				signal := strategy.GenerateSignal(c)
+
+				if signal != nil {
+					log.Printf("Signal found: %+v", *signal)
+				}
 			}
 			continue
 		}

@@ -12,7 +12,7 @@ import (
 
 type Strategy interface {
 	ProcessCandle(c candle.Candle)
-	GenerateSignal(c candle.Candle)
+	GenerateSignal(c candle.Candle) *Signal
 }
 
 type BarStrategy struct {
@@ -103,7 +103,7 @@ func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 	}
 }
 
-func (b *BarStrategy) GenerateSignal(c candle.Candle) {
+func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 	for _, symbol := range b.Symbols {
 		if c.Symbol != symbol {
 			continue
@@ -155,7 +155,7 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) {
 						Timestamp: c.Timestamp,
 						CancelTime: c.Timestamp.Add(120 * time.Minute),
 					}
-					b.SendSignal(signal)
+					return &signal
 				} else if raid.Direction == Sellside && inverse.Direction == Sellside  && c.Close > raid.Price {
 					sl := b.getMinInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).Low
 					signal := Signal{
@@ -167,11 +167,12 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) {
 						Timestamp: c.Timestamp,
 						CancelTime: c.Timestamp.Add(120 * time.Minute),
 					}
-					b.SendSignal(signal)
+					return &signal
 				}
 			}
 		}
 	}
+	return nil
 }
 
 func (b *BarStrategy) getNCandles(c candle.Candle) error {
@@ -233,10 +234,6 @@ func (b *BarStrategy) getMaxInRange(symbol string, startTime time.Time, endTime 
 	}
 
 	return high
-}
-
-func (b *BarStrategy) SendSignal(signal Signal) {
-	log.Printf("[%s]Sending signal: %+v", signal.Timestamp.In(b.Location).Format(time.RFC3339),signal)
 }
 
 func (b *BarStrategy) hasCandlesForRange(symbol string, start time.Time, end time.Time) bool {
