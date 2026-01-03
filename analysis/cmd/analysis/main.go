@@ -13,6 +13,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/mgordon34/gostonks/analysis/internal/portfolio"
 	"github.com/mgordon34/gostonks/analysis/internal/strategy"
 	"github.com/mgordon34/gostonks/internal/config"
 	"github.com/mgordon34/gostonks/internal/storage"
@@ -35,6 +36,11 @@ func main() {
 
 	var strategies []strategy.Strategy
 	strategies = append(strategies, strategy.NewBarStrategy(ctx, candleRepository, "iFVG Strat", "futures", []string{"NQ"}, 2880))
+	portfolio := portfolio.Portfolio{
+		Name: "Backtest Portfolio",
+		Strategies: strategies,
+		Balance: 100000,
+	}
 
 	log.Printf("Analysis service listening for candles on redis list 'market' at %s", addr)
 
@@ -58,14 +64,7 @@ func main() {
 			}
 			// log.Printf("Received candle payload for %s on %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
 
-			for _, strategy := range strategies {
-				strategy.ProcessCandle(c)
-				signal := strategy.GenerateSignal(c)
-
-				if signal != nil {
-					log.Printf("Signal found: %+v", *signal)
-				}
-			}
+			portfolio.ProcessCandle(c)
 			continue
 		}
 		log.Printf("Unexpected BLPOP response: %v", values)
