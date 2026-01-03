@@ -9,10 +9,10 @@ import (
 type PositionStatus string
 
 const (
-	Pending PositionStatus = "pending"
-	Open PositionStatus = "open"
-	Closed PositionStatus = "closed"
-	Cancelled PositionStatus = "cancelled"
+	PositionPending PositionStatus = "pending"
+	PositionOpen PositionStatus = "open"
+	PositionClosed PositionStatus = "closed"
+	PositionCancelled PositionStatus = "cancelled"
 )
 
 type Position struct {
@@ -25,4 +25,8 @@ type Position struct {
 	Status 		PositionStatus
 	Timestamp	time.Time
 	CancelTime	time.Time
+}
+
+func (p *Position) IsOpen() bool {
+	return p.Status == PositionPending || p.Status == PositionOpen
 }
