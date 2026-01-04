@@ -147,24 +147,26 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 			for _, inverse := range inverses {
 				if raid.Direction == Buyside && inverse.Direction == Buyside && c.Close < raid.Price {
 					sl := b.getMaxInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).High
+					tp := c.Close - (sl - c.Close) * 1
 					signal := Signal{
 						Action: trading.SellAction,
-						Type: trading.MarketOrder,
-						Price: c.Close,
-						TakeProfit: c.Close - (sl - c.Close) * 1,
-						StopLoss: sl,
+						EntryType: trading.MarketOrder,
+						EntryPrice: &c.Close,
+						TakeProfit: &tp,
+						StopLoss: &sl,
 						Timestamp: c.Timestamp,
 						CancelTime: c.Timestamp.Add(120 * time.Minute),
 					}
 					return &signal
 				} else if raid.Direction == Sellside && inverse.Direction == Sellside  && c.Close > raid.Price {
 					sl := b.getMinInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).Low
+					tp := c.Close + (c.Close - sl) * 1
 					signal := Signal{
 						Action: trading.BuyAction,
-						Type: trading.MarketOrder,
-						Price: c.Close,
-						TakeProfit: c.Close + (c.Close - sl) * 1,
-						StopLoss: sl,
+						EntryType: trading.MarketOrder,
+						EntryPrice: &c.Close,
+						TakeProfit: &tp,
+						StopLoss: &sl,
 						Timestamp: c.Timestamp,
 						CancelTime: c.Timestamp.Add(120 * time.Minute),
 					}

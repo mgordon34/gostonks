@@ -8,10 +8,12 @@ import (
 
 type Signal struct {
 	Action		trading.Action
-	Type 		trading.OrderType
-	Price		float64
-	TakeProfit 	float64
-	StopLoss	float64
 	Timestamp 	time.Time
 	CancelTime	time.Time
+
+	EntryType 	trading.OrderType
+	EntryPrice	*float64
+
+	TakeProfit 	*float64
+	StopLoss	*float64
 }
