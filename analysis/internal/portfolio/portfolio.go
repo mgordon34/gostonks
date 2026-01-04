@@ -45,8 +45,6 @@ func (p *Portfolio) updateStrategies(c candle.Candle) {
 }
 
 func (p *Portfolio) generateSignals(c candle.Candle) {
-	// Skip if we already have an open position
-
 	for _, strat := range p.Strategies {
 		signal := strat.GenerateSignal(c)
 
