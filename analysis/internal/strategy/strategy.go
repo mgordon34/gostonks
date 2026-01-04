@@ -7,6 +7,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/mgordon34/gostonks/analysis/cmd/trading"
 	"github.com/mgordon34/gostonks/market/cmd/candle"
 )
 
@@ -147,8 +148,8 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 				if raid.Direction == Buyside && inverse.Direction == Buyside && c.Close < raid.Price {
 					sl := b.getMaxInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).High
 					signal := Signal{
-						Action: SellAction,
-						Type: MarketOrder,
+						Action: trading.SellAction,
+						Type: trading.MarketOrder,
 						Price: c.Close,
 						TakeProfit: c.Close - (sl - c.Close) * 1,
 						StopLoss: sl,
@@ -159,8 +160,8 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 				} else if raid.Direction == Sellside && inverse.Direction == Sellside  && c.Close > raid.Price {
 					sl := b.getMinInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).Low
 					signal := Signal{
-						Action: BuyAction,
-						Type: MarketOrder,
+						Action: trading.BuyAction,
+						Type: trading.MarketOrder,
 						Price: c.Close,
 						TakeProfit: c.Close + (c.Close - sl) * 1,
 						StopLoss: sl,

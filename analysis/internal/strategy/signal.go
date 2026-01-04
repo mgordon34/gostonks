@@ -1,10 +1,14 @@
 package strategy
 
-import "time"
+import (
+	"time"
+
+	"github.com/mgordon34/gostonks/analysis/cmd/trading"
+)
 
 type Signal struct {
-	Action		Action
-	Type 		OrderType
+	Action		trading.Action
+	Type 		trading.OrderType
 	Price		float64
 	TakeProfit 	float64
 	StopLoss	float64

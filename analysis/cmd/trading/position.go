@@ -2,8 +2,6 @@ package trading
 
 import (
 	"time"
-
-	"github.com/mgordon34/gostonks/analysis/internal/strategy"
 )
 
 type PositionStatus string
@@ -16,8 +14,8 @@ const (
 )
 
 type Position struct {
-	Action	 	strategy.Action
-	Type 		strategy.OrderType
+	Action	 	Action
+	Type 		OrderType
 	EnterPrice	float64
 	StopLoss	float64
 	TakeProfit	float64

@@ -16,8 +16,9 @@ type Portfolio struct {
 }
 
 func (p *Portfolio) ProcessCandle(c candle.Candle) {
-	p.updatePositions(c)
 	p.updateStrategies(c)
+	p.updatePositions(c)
+	p.generateSignals(c)
 }
 
 func (p *Portfolio) updatePositions(c candle.Candle) {
@@ -26,6 +27,11 @@ func (p *Portfolio) updatePositions(c candle.Candle) {
 func (p *Portfolio) updateStrategies(c candle.Candle) {
 	for _, strategy := range p.Strategies {
 		strategy.ProcessCandle(c)
+	}
+}
+
+func (p *Portfolio) generateSignals(c candle.Candle) {
+	for _, strategy := range p.Strategies {
 		signal := strategy.GenerateSignal(c)
 
 		if signal != nil {
