@@ -15,14 +15,10 @@ const (
 
 type Position struct {
 	Action	 	Action
-	Type 		OrderType
-	EnterPrice	float64
-	StopLoss	float64
-	TakeProfit	float64
-	ExitPrice	float64
 	Status 		PositionStatus
+	Orders		[]Order
 	Timestamp	time.Time
-	CancelTime	time.Time
+	Expiration	time.Time
 }
 
 func (p *Position) IsOpen() bool {

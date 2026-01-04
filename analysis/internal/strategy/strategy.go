@@ -73,8 +73,8 @@ func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
 	b.Pools.AddLP(LiquidityPool{Price: preMarketLow.Low, Direction: Sellside, Candle: &preMarketLow, Name: "Pre Market Low"})
 	b.Pools.AddLP(LiquidityPool{Price: preMarketHigh.High, Direction: Buyside, Candle: &preMarketHigh, Name: "Pre Market High"})
 
-	log.Printf("Active Pools: %v", b.Pools.GetPools(true))
-	log.Printf("Raided Pools: %v", b.Pools.GetPools(false))
+	// log.Printf("Active Pools: %v", b.Pools.GetPools(true))
+	// log.Printf("Raided Pools: %v", b.Pools.GetPools(false))
 }
 
 func (b *BarStrategy) ProcessCandle(c candle.Candle) {
@@ -94,7 +94,7 @@ func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 
 			tsNY := c.Timestamp.In(b.Location)
 			if tsNY.Hour() == 9 && tsNY.Minute() == 30 {
-				log.Printf("Candle at 09:30 America/New_York for %s: %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
+				log.Printf("New day for %s: %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
 				b.initializeDay(c.Symbol, c.Timestamp)
 			}
 
@@ -147,24 +147,26 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 			for _, inverse := range inverses {
 				if raid.Direction == Buyside && inverse.Direction == Buyside && c.Close < raid.Price {
 					sl := b.getMaxInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).High
+					tp := c.Close - (sl - c.Close) * 1
 					signal := Signal{
 						Action: trading.SellAction,
-						Type: trading.MarketOrder,
-						Price: c.Close,
-						TakeProfit: c.Close - (sl - c.Close) * 1,
-						StopLoss: sl,
+						EntryType: trading.MarketOrder,
+						EntryPrice: &c.Close,
+						TakeProfit: &tp,
+						StopLoss: &sl,
 						Timestamp: c.Timestamp,
 						CancelTime: c.Timestamp.Add(120 * time.Minute),
 					}
 					return &signal
 				} else if raid.Direction == Sellside && inverse.Direction == Sellside  && c.Close > raid.Price {
 					sl := b.getMinInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).Low
+					tp := c.Close + (c.Close - sl) * 1
 					signal := Signal{
 						Action: trading.BuyAction,
-						Type: trading.MarketOrder,
-						Price: c.Close,
-						TakeProfit: c.Close + (c.Close - sl) * 1,
-						StopLoss: sl,
+						EntryType: trading.MarketOrder,
+						EntryPrice: &c.Close,
+						TakeProfit: &tp,
+						StopLoss: &sl,
 						Timestamp: c.Timestamp,
 						CancelTime: c.Timestamp.Add(120 * time.Minute),
 					}
