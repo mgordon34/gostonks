@@ -1,4 +1,4 @@
-package position
+package trading
 
 import (
 	"time"

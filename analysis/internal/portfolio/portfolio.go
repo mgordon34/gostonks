@@ -3,7 +3,7 @@ package portfolio
 import (
 	"log"
 
-	"github.com/mgordon34/gostonks/analysis/cmd/position"
+	"github.com/mgordon34/gostonks/analysis/cmd/trading"
 	"github.com/mgordon34/gostonks/analysis/internal/strategy"
 	"github.com/mgordon34/gostonks/market/cmd/candle"
 )
@@ -12,10 +12,18 @@ type Portfolio struct {
 	Name 		string
 	Strategies 	[]strategy.Strategy
 	Balance 	float64
-	Positions	[]position.Position
+	Positions	[]trading.Position
 }
 
 func (p *Portfolio) ProcessCandle(c candle.Candle) {
+	p.updatePositions(c)
+	p.updateStrategies(c)
+}
+
+func (p *Portfolio) updatePositions(c candle.Candle) {
+}
+
+func (p *Portfolio) updateStrategies(c candle.Candle) {
 	for _, strategy := range p.Strategies {
 		strategy.ProcessCandle(c)
 		signal := strategy.GenerateSignal(c)
