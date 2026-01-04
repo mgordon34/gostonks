@@ -73,8 +73,8 @@ func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
 	b.Pools.AddLP(LiquidityPool{Price: preMarketLow.Low, Direction: Sellside, Candle: &preMarketLow, Name: "Pre Market Low"})
 	b.Pools.AddLP(LiquidityPool{Price: preMarketHigh.High, Direction: Buyside, Candle: &preMarketHigh, Name: "Pre Market High"})
 
-	log.Printf("Active Pools: %v", b.Pools.GetPools(true))
-	log.Printf("Raided Pools: %v", b.Pools.GetPools(false))
+	// log.Printf("Active Pools: %v", b.Pools.GetPools(true))
+	// log.Printf("Raided Pools: %v", b.Pools.GetPools(false))
 }
 
 func (b *BarStrategy) ProcessCandle(c candle.Candle) {
@@ -94,7 +94,7 @@ func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 
 			tsNY := c.Timestamp.In(b.Location)
 			if tsNY.Hour() == 9 && tsNY.Minute() == 30 {
-				log.Printf("Candle at 09:30 America/New_York for %s: %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
+				log.Printf("New day for %s: %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
 				b.initializeDay(c.Symbol, c.Timestamp)
 			}
 

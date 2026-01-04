@@ -46,17 +46,18 @@ func (p *Portfolio) updateStrategies(c candle.Candle) {
 
 func (p *Portfolio) generateSignals(c candle.Candle) {
 	// Skip if we already have an open position
-	for _, pos := range p.Positions {
-		if pos.IsOpen() {
-			return
-		}
-	}
 
 	for _, strat := range p.Strategies {
 		signal := strat.GenerateSignal(c)
 
 		if signal != nil {
 			log.Printf("Signal found: %+v", *signal)
+			for _, pos := range p.Positions {
+				if pos.IsOpen() {
+					log.Printf("Skipping signal as already in a position")
+					return
+				}
+			}
 
 			position := newPositionFromSignal(signal, c.Close)
 

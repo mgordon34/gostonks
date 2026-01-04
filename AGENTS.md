@@ -34,3 +34,8 @@ Continue with imperative, ≤72-character commit subjects and concise bodies exp
 2. Solution overview, including any new containers or Compose services.
 3. Testing evidence: command output for `go test`, `golangci-lint`, and relevant Compose runs.
 4. Follow-up work or rollout notes (migrations, env changes). Request review before merging and ensure the Compose stack builds cleanly in CI.
+
+## Authorship Rules
+- Never include "Generated with Claude Code" or similar AI attribution in commits or PRs
+- Never add Co-Authored-By lines referencing Claude or Anthropic
+- All commits should appear as authored solely by the repository owner
