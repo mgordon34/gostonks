@@ -230,15 +230,17 @@ func (p *Portfolio) takeProfitTriggered(action trading.Action, targetPrice float
 
 func ReportPortfolioPerformance(positions []trading.Position) {
 	var profit float64
-	var trades, wins int
+	var fullTrades, fullWins int   // Closed via TP or SL
+	var exitTrades, exitWins int   // Closed via Exit order (market close, etc.)
+
 	for _, pos := range positions {
 		if pos.Status != trading.PositionClosed {
 			continue
 		}
-		trades++
 
 		var entryPrice, exitPrice float64
 		exitViaTP := false
+		exitViaExit := false
 		for _, order := range pos.Orders {
 			if order.GetRole() == trading.EntryRole {
 				entryPrice = *order.GetPrice()
@@ -249,6 +251,7 @@ func ReportPortfolioPerformance(positions []trading.Position) {
 				exitPrice = *order.GetPrice()
 			} else if order.GetRole() == trading.ExitRole && order.GetStatus() == trading.OrderFilled {
 				exitPrice = *order.GetPrice()
+				exitViaExit = true
 			}
 		}
 
@@ -259,17 +262,34 @@ func ReportPortfolioPerformance(positions []trading.Position) {
 		} else {
 			pnl = entryPrice - exitPrice
 		}
-
-		// Determine win: TP exit is always a win, otherwise check P&L
-		if exitViaTP || pnl > 0 {
-			wins++
-		}
 		profit += pnl
+
+		// Track wins separately for full closes vs exits
+		isWin := exitViaTP || pnl > 0
+		if exitViaExit {
+			exitTrades++
+			if isWin {
+				exitWins++
+			}
+		} else {
+			fullTrades++
+			if isWin {
+				fullWins++
+			}
+		}
 	}
 
-	winrate := 0.0
-	if trades > 0 {
-		winrate = float64(wins) / float64(trades)
+	fullWinrate := 0.0
+	if fullTrades > 0 {
+		fullWinrate = float64(fullWins) / float64(fullTrades)
 	}
-	log.Printf("Portfolio stats: %d trades, %.2f winrate, $%.2f profit", trades, winrate, profit)
+	exitWinrate := 0.0
+	if exitTrades > 0 {
+		exitWinrate = float64(exitWins) / float64(exitTrades)
+	}
+	totalTrades := fullTrades + exitTrades
+
+	log.Printf("Portfolio stats: %d trades, $%.2f profit", totalTrades, profit)
+	log.Printf("  Full closes (TP/SL): %d trades, %.2f winrate", fullTrades, fullWinrate)
+	log.Printf("  Early exits: %d trades, %.2f winrate", exitTrades, exitWinrate)
 }
