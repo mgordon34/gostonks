@@ -28,6 +28,7 @@ type BarStrategy struct {
 	Location 	*time.Location
 	Pools	 	LiquidityPoolManager
 	Gaps   		GapManager
+	trades 		int
 }
 
 func NewBarStrategy(ctx context.Context, repo candle.Repository, name string, market string, symbols []string, lookback int) *BarStrategy {
@@ -51,6 +52,7 @@ func NewBarStrategy(ctx context.Context, repo candle.Repository, name string, ma
 func (b *BarStrategy) initializeDay(symbol string, timestamp time.Time) {
 	b.Pools = LiquidityPoolManager{}
 	b.Gaps = GapManager{}
+	b.trades = 0
 
 	prevDay := timestamp.AddDate(0, 0, -1)
 	asiaOpen :=  time.Date(prevDay.Year(), prevDay.Month(), prevDay.Day(), 20, 0, 0, 0, b.Location)
@@ -106,7 +108,7 @@ func (b *BarStrategy) ProcessCandle(c candle.Candle) {
 
 func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 	for _, symbol := range b.Symbols {
-		if c.Symbol != symbol {
+		if c.Symbol != symbol || b.trades > 0 {
 			continue
 		}
 
@@ -160,6 +162,7 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 						Timestamp: c.Timestamp,
 						CancelTime: c.Timestamp.Add(120 * time.Minute),
 					}
+					b.trades++
 					return &signal
 				} else if raid.Direction == Sellside && inverse.Direction == Sellside  && c.Close > raid.Price {
 					sl := b.getMinInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).Low
@@ -176,6 +179,7 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 						Timestamp: c.Timestamp,
 						CancelTime: c.Timestamp.Add(120 * time.Minute),
 					}
+					b.trades++
 					return &signal
 				}
 			}
