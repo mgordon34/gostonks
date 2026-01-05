@@ -49,7 +49,7 @@ func (p *Portfolio) generateSignals(c candle.Candle) {
 		signal := strat.GenerateSignal(c)
 
 		if signal != nil {
-			log.Printf("Signal found: %+v", *signal)
+			log.Printf("Signal found: Action=%s Entry=%.2f TP=%.2f Sl=%.2f", signal.Action, *signal.EntryPrice, *signal.TakeProfit, *signal.StopLoss)
 			for _, pos := range p.Positions {
 				if pos.IsOpen() {
 					log.Printf("Skipping signal as already in a position")
