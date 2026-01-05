@@ -136,7 +136,7 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 				log.Fatalf("Error getting raid width: %v", err)
 			}
 
-			if raidAge > 10 || raidWidth > math.MaxInt {
+			if raidAge > 50 || raidWidth > math.MaxInt {
 				continue
 			}
 
@@ -147,6 +147,9 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 			for _, inverse := range inverses {
 				if raid.Direction == Buyside && inverse.Direction == Buyside && c.Close < raid.Price {
 					sl := b.getMaxInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).High
+					if (sl - c.Close) > 100 || (sl - c.Close) < 10 {
+						continue
+					}
 					tp := c.Close - (sl - c.Close) * 1
 					signal := Signal{
 						Action: trading.SellAction,
@@ -160,6 +163,9 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 					return &signal
 				} else if raid.Direction == Sellside && inverse.Direction == Sellside  && c.Close > raid.Price {
 					sl := b.getMinInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).Low
+					if (c.Close - sl) > 100 || (c.Close - sl) < 10 {
+						continue
+					}
 					tp := c.Close + (c.Close - sl) * 1
 					signal := Signal{
 						Action: trading.BuyAction,

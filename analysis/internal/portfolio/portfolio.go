@@ -2,7 +2,7 @@ package portfolio
 
 import (
 	"log"
-	"math"
+	"time"
 
 	"github.com/mgordon34/gostonks/analysis/cmd/trading"
 	"github.com/mgordon34/gostonks/analysis/internal/strategy"
@@ -26,6 +26,13 @@ func (p *Portfolio) updatePositions(c candle.Candle) {
 	for i := range p.Positions {
 		pos := &p.Positions[i]
 		if !pos.IsOpen() {
+			continue
+		}
+
+		// Check for market close (3:59 PM ET candle) - close open positions
+		if p.isMarketCloseCandle(c) && pos.Status == trading.PositionOpen {
+			p.closePositionAtPrice(pos, c.Close, "market_close", c.Timestamp)
+			ReportPortfolioPerformance(p.Positions)
 			continue
 		}
 
@@ -175,6 +182,31 @@ func (p *Portfolio) cancelPosition(pos *trading.Position) {
 	}
 }
 
+func (p *Portfolio) closePositionAtPrice(pos *trading.Position, exitPrice float64, reason string, timestamp time.Time) {
+	// Create and add exit order
+	exit := trading.NewExit(&exitPrice, timestamp, reason)
+	pos.Orders = append(pos.Orders, exit)
+
+	// Cancel SL and TP orders
+	for _, order := range pos.Orders {
+		role := order.GetRole()
+		if role == trading.StopLossRole || role == trading.TakeProfitRole {
+			if order.GetStatus() == trading.OrderSubmitted {
+				order.SetStatus(trading.OrderCancelled)
+			}
+		}
+	}
+
+	pos.Status = trading.PositionClosed
+	log.Printf("Position closed at %.2f (%s)", exitPrice, reason)
+}
+
+func (p *Portfolio) isMarketCloseCandle(c candle.Candle) bool {
+	loc, _ := time.LoadLocation("America/New_York")
+	t := c.Timestamp.In(loc)
+	return t.Hour() == 15 && t.Minute() == 59
+}
+
 func (p *Portfolio) limitPriceReached(action trading.Action, limitPrice float64, c candle.Candle) bool {
 	if action == trading.BuyAction {
 		return c.Low <= limitPrice
@@ -206,25 +238,38 @@ func ReportPortfolioPerformance(positions []trading.Position) {
 		trades++
 
 		var entryPrice, exitPrice float64
-		isWin := false
+		exitViaTP := false
 		for _, order := range pos.Orders {
 			if order.GetRole() == trading.EntryRole {
 				entryPrice = *order.GetPrice()
 			} else if order.GetRole() == trading.TakeProfitRole && order.GetStatus() == trading.OrderFilled {
 				exitPrice = *order.GetPrice()
-				isWin = true
+				exitViaTP = true
 			} else if order.GetRole() == trading.StopLossRole && order.GetStatus() == trading.OrderFilled {
+				exitPrice = *order.GetPrice()
+			} else if order.GetRole() == trading.ExitRole && order.GetStatus() == trading.OrderFilled {
 				exitPrice = *order.GetPrice()
 			}
 		}
 
-		if isWin {
-			wins++
-			profit += math.Abs(entryPrice - exitPrice)
+		// Calculate P&L based on position direction
+		var pnl float64
+		if pos.Action == trading.BuyAction {
+			pnl = exitPrice - entryPrice
 		} else {
-			profit -= math.Abs(entryPrice - exitPrice)
+			pnl = entryPrice - exitPrice
 		}
+
+		// Determine win: TP exit is always a win, otherwise check P&L
+		if exitViaTP || pnl > 0 {
+			wins++
+		}
+		profit += pnl
 	}
 
-	log.Printf("Portfolio stats: %d trades, %.2f winrate, $%.2f profit", trades, float64(wins)/float64(trades), profit)
+	winrate := 0.0
+	if trades > 0 {
+		winrate = float64(wins) / float64(trades)
+	}
+	log.Printf("Portfolio stats: %d trades, %.2f winrate, $%.2f profit", trades, winrate, profit)
 }

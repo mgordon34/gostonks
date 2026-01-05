@@ -31,6 +31,7 @@ const (
 	EntryRole      OrderRole = "entry"
 	StopLossRole   OrderRole = "stop_loss"
 	TakeProfitRole OrderRole = "take_profit"
+	ExitRole       OrderRole = "exit"
 )
 
 type Order interface {
@@ -152,5 +153,30 @@ func NewTakeProfit(price *float64, timestamp time.Time) *TakeProfit {
 			Price:     price,
 			Timestamp: timestamp,
 		},
+	}
+}
+
+// Exit represents a manual/forced position exit (market close, manual close, etc.)
+type Exit struct {
+	BaseOrder
+	Reason string
+}
+
+func (o *Exit) GetOrderType() OrderType {
+	return MarketOrder
+}
+
+func (o *Exit) GetRole() OrderRole {
+	return ExitRole
+}
+
+func NewExit(price *float64, timestamp time.Time, reason string) *Exit {
+	return &Exit{
+		BaseOrder: BaseOrder{
+			Status:    OrderFilled,
+			Price:     price,
+			Timestamp: timestamp,
+		},
+		Reason: reason,
 	}
 }
