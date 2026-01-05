@@ -2,6 +2,7 @@ package portfolio
 
 import (
 	"log"
+	"math"
 
 	"github.com/mgordon34/gostonks/analysis/cmd/trading"
 	"github.com/mgordon34/gostonks/analysis/internal/strategy"
@@ -129,6 +130,7 @@ func (p *Portfolio) updateOrders(pos *trading.Position, c candle.Candle) {
 					o.SetStatus(trading.OrderFilled)
 					p.closePosition(pos, trading.StopLossRole)
 					log.Printf("Stop loss triggered at %.2f", *o.GetPrice())
+					ReportPortfolioPerformance(p.Positions)
 				}
 			}
 
@@ -138,6 +140,7 @@ func (p *Portfolio) updateOrders(pos *trading.Position, c candle.Candle) {
 					o.SetStatus(trading.OrderFilled)
 					p.closePosition(pos, trading.TakeProfitRole)
 					log.Printf("Take profit triggered at %.2f", *o.GetPrice())
+					ReportPortfolioPerformance(p.Positions)
 				}
 			}
 		}
@@ -191,4 +194,37 @@ func (p *Portfolio) takeProfitTriggered(action trading.Action, targetPrice float
 		return c.High >= targetPrice
 	}
 	return c.Low <= targetPrice
+}
+
+func ReportPortfolioPerformance(positions []trading.Position) {
+	var profit float64
+	var trades, wins int
+	for _, pos := range positions {
+		if pos.Status != trading.PositionClosed {
+			continue
+		}
+		trades++
+
+		var entryPrice, exitPrice float64
+		isWin := false
+		for _, order := range pos.Orders {
+			if order.GetRole() == trading.EntryRole {
+				entryPrice = *order.GetPrice()
+			} else if order.GetRole() == trading.TakeProfitRole && order.GetStatus() == trading.OrderFilled {
+				exitPrice = *order.GetPrice()
+				isWin = true
+			} else if order.GetRole() == trading.StopLossRole && order.GetStatus() == trading.OrderFilled {
+				exitPrice = *order.GetPrice()
+			}
+		}
+
+		if isWin {
+			wins++
+			profit += math.Abs(entryPrice - exitPrice)
+		} else {
+			profit -= math.Abs(entryPrice - exitPrice)
+		}
+	}
+
+	log.Printf("Portfolio stats: %d trades, %.2f winrate, $%.2f profit", trades, float64(wins)/float64(trades), profit)
 }
