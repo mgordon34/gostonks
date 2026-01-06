@@ -6,7 +6,7 @@ import (
 )
 
 type RiskStrategy interface {
-	GetQuantityForTrade(entryPrice float64, stopLoss float64) float64
+	GetQuantityForTrade(balance float64, entryPrice float64, stopLoss float64) int
 }
 
 type SimpleRiskStrategy struct {
@@ -24,7 +24,7 @@ func (rs *SimpleRiskStrategy) GetQuantityForTrade(balance float64, entryPrice fl
 func GetRiskPerPoint(market string) int {
 	switch market {
 	case "futures":
-		return 20
+		return 2
 	default:
 		log.Fatalf("Unknown market: %s", market)
 		return 0
