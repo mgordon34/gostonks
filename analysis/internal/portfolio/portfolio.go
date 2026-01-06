@@ -3,6 +3,8 @@ package portfolio
 import (
 	"log"
 	"time"
+	"golang.org/x/text/language"
+    "golang.org/x/text/message"
 
 	"github.com/mgordon34/gostonks/analysis/cmd/trading"
 	"github.com/mgordon34/gostonks/analysis/internal/risk"
@@ -267,7 +269,7 @@ func ReportPortfolioPerformance(positions []trading.Position) {
 		} else {
 			pnl = entryPrice - exitPrice
 		}
-		profit += pnl
+		profit += pnl * float64(pos.Quantity) * 2
 
 		// Track wins separately for full closes vs exits
 		isWin := exitViaTP || pnl > 0
@@ -294,7 +296,9 @@ func ReportPortfolioPerformance(positions []trading.Position) {
 	}
 	totalTrades := fullTrades + exitTrades
 
-	log.Printf("Portfolio stats: %d trades, $%.2f profit", totalTrades, profit)
+	p := message.NewPrinter(language.English)
+	str := p.Sprintf("Portfolio stats: %d trades, $%.2f profit", totalTrades, profit)
+	log.Println(str)
 	log.Printf("  Full closes (TP/SL): %d trades, %.2f winrate", fullTrades, fullWinrate)
 	log.Printf("  Early exits: %d trades, %.2f winrate", exitTrades, exitWinrate)
 }
