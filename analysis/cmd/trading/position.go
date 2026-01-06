@@ -16,6 +16,7 @@ const (
 type Position struct {
 	Action	 	Action
 	Status 		PositionStatus
+	Quantity	int
 	Orders		[]Order
 	Timestamp	time.Time
 	Expiration	time.Time

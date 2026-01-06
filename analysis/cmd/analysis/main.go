@@ -14,6 +14,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/mgordon34/gostonks/analysis/internal/portfolio"
+	"github.com/mgordon34/gostonks/analysis/internal/risk"
 	"github.com/mgordon34/gostonks/analysis/internal/strategy"
 	"github.com/mgordon34/gostonks/internal/config"
 	"github.com/mgordon34/gostonks/internal/storage"
@@ -40,6 +41,7 @@ func main() {
 		Name: "Backtest Portfolio",
 		Strategies: strategies,
 		Balance: 100000,
+		RiskStrategy: &risk.SimpleRiskStrategy{Market: "futures", RiskPercent: .02},
 	}
 
 	log.Printf("Analysis service listening for candles on redis list 'market' at %s", addr)

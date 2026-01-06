@@ -37,6 +37,7 @@ const (
 type Order interface {
 	GetOrderType() OrderType
 	GetPrice() *float64
+	GetQuantity() int
 	GetStatus() OrderStatus
 	SetStatus(status OrderStatus)
 	GetRole() OrderRole
@@ -44,13 +45,18 @@ type Order interface {
 
 // BaseOrder contains common fields for all order types
 type BaseOrder struct {
-	Status    OrderStatus
-	Price     *float64
-	Timestamp time.Time
+	Status    	OrderStatus
+	Price     	*float64
+	Quantity	int
+	Timestamp 	time.Time
 }
 
 func (o *BaseOrder) GetPrice() *float64 {
 	return o.Price
+}
+
+func (o *BaseOrder) GetQuantity() int {
+	return o.Quantity
 }
 
 func (o *BaseOrder) GetStatus() OrderStatus {
@@ -75,11 +81,12 @@ func (o *MarketEntry) GetRole() OrderRole {
 	return EntryRole
 }
 
-func NewMarketEntry(price *float64, timestamp time.Time) *MarketEntry {
+func NewMarketEntry(price *float64, quantity int, timestamp time.Time) *MarketEntry {
 	return &MarketEntry{
 		BaseOrder: BaseOrder{
 			Status:    OrderPending,
 			Price:     price,
+			Quantity:  quantity,
 			Timestamp: timestamp,
 		},
 	}
@@ -99,11 +106,12 @@ func (o *LimitEntry) GetRole() OrderRole {
 	return EntryRole
 }
 
-func NewLimitEntry(price *float64, timestamp time.Time, cancelTime time.Time) *LimitEntry {
+func NewLimitEntry(price *float64, quantity int, timestamp time.Time, cancelTime time.Time) *LimitEntry {
 	return &LimitEntry{
 		BaseOrder: BaseOrder{
 			Status:    OrderPending,
 			Price:     price,
+			Quantity:  quantity,
 			Timestamp: timestamp,
 		},
 		CancelTime: cancelTime,
@@ -123,11 +131,12 @@ func (o *StopLoss) GetRole() OrderRole {
 	return StopLossRole
 }
 
-func NewStopLoss(price *float64, timestamp time.Time) *StopLoss {
+func NewStopLoss(price *float64, quantity int, timestamp time.Time) *StopLoss {
 	return &StopLoss{
 		BaseOrder: BaseOrder{
 			Status:    OrderPending,
 			Price:     price,
+			Quantity:  quantity,
 			Timestamp: timestamp,
 		},
 	}
@@ -146,11 +155,12 @@ func (o *TakeProfit) GetRole() OrderRole {
 	return TakeProfitRole
 }
 
-func NewTakeProfit(price *float64, timestamp time.Time) *TakeProfit {
+func NewTakeProfit(price *float64, quantity int, timestamp time.Time) *TakeProfit {
 	return &TakeProfit{
 		BaseOrder: BaseOrder{
 			Status:    OrderPending,
 			Price:     price,
+			Quantity:  quantity,
 			Timestamp: timestamp,
 		},
 	}
@@ -170,11 +180,12 @@ func (o *Exit) GetRole() OrderRole {
 	return ExitRole
 }
 
-func NewExit(price *float64, timestamp time.Time, reason string) *Exit {
+func NewExit(price *float64, quantity int, timestamp time.Time, reason string) *Exit {
 	return &Exit{
 		BaseOrder: BaseOrder{
 			Status:    OrderFilled,
 			Price:     price,
+			Quantity:  quantity,
 			Timestamp: timestamp,
 		},
 		Reason: reason,

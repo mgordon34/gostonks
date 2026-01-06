@@ -5,15 +5,17 @@ import (
 	"time"
 
 	"github.com/mgordon34/gostonks/analysis/cmd/trading"
+	"github.com/mgordon34/gostonks/analysis/internal/risk"
 	"github.com/mgordon34/gostonks/analysis/internal/strategy"
 	"github.com/mgordon34/gostonks/market/cmd/candle"
 )
 
 type Portfolio struct {
-	Name       string
-	Strategies []strategy.Strategy
-	Balance    float64
-	Positions  []trading.Position
+	Name       		string
+	Strategies 		[]strategy.Strategy
+	Balance    		float64
+	Positions  		[]trading.Position
+	RiskStrategy 	risk.RiskStrategy
 }
 
 func (p *Portfolio) ProcessCandle(c candle.Candle) {
@@ -65,7 +67,7 @@ func (p *Portfolio) generateSignals(c candle.Candle) {
 				}
 			}
 
-			position := newPositionFromSignal(signal, c.Close)
+			position := p.newPositionFromSignal(signal, c.Close)
 
 			// For limit orders, submit entry
 			if signal.EntryType == trading.LimitOrder {
@@ -78,31 +80,33 @@ func (p *Portfolio) generateSignals(c candle.Candle) {
 			}
 
 			p.Positions = append(p.Positions, *position)
-			log.Printf("Position created: Action=%s, Status=%s", position.Action, position.Status)
+			log.Printf("Position created: Action=%s, Quantity=%d, Status=%s", position.Action, position.Quantity, position.Status)
 		}
 	}
 }
 
-func newPositionFromSignal(signal *strategy.Signal, fillPrice float64) *trading.Position {
+func (p *Portfolio) newPositionFromSignal(signal *strategy.Signal, fillPrice float64) *trading.Position {
 	var orders []trading.Order
 	var status trading.PositionStatus
 
+	quantity := p.RiskStrategy.GetQuantityForTrade(p.Balance, *signal.EntryPrice, *signal.StopLoss)
+
 	if signal.EntryType == trading.MarketOrder {
 		// Market order fills immediately at candle close - position is OPEN
-		entry := trading.NewMarketEntry(signal.EntryPrice, signal.Timestamp)
+		entry := trading.NewMarketEntry(signal.EntryPrice, quantity, signal.Timestamp)
 		entry.SetStatus(trading.OrderFilled)
 		entry.FillPrice = &fillPrice
 		orders = append(orders, entry)
 		status = trading.PositionOpen
 	} else {
 		// Limit order waits for price - position is PENDING
-		orders = append(orders, trading.NewLimitEntry(signal.EntryPrice, signal.Timestamp, signal.CancelTime))
+		orders = append(orders, trading.NewLimitEntry(signal.EntryPrice, quantity, signal.Timestamp, signal.CancelTime))
 		status = trading.PositionPending
 	}
 
 	// Create SL and TP (submitted immediately if market entry, pending if limit)
-	sl := trading.NewStopLoss(signal.StopLoss, signal.Timestamp)
-	tp := trading.NewTakeProfit(signal.TakeProfit, signal.Timestamp)
+	sl := trading.NewStopLoss(signal.StopLoss, quantity, signal.Timestamp)
+	tp := trading.NewTakeProfit(signal.TakeProfit, quantity, signal.Timestamp)
 	if status == trading.PositionOpen {
 		sl.SetStatus(trading.OrderSubmitted)
 		tp.SetStatus(trading.OrderSubmitted)
@@ -112,6 +116,7 @@ func newPositionFromSignal(signal *strategy.Signal, fillPrice float64) *trading.
 	return &trading.Position{
 		Action:     signal.Action,
 		Status:     status,
+		Quantity: 	quantity,
 		Orders:     orders,
 		Timestamp:  signal.Timestamp,
 		Expiration: signal.CancelTime,
@@ -184,7 +189,7 @@ func (p *Portfolio) cancelPosition(pos *trading.Position) {
 
 func (p *Portfolio) closePositionAtPrice(pos *trading.Position, exitPrice float64, reason string, timestamp time.Time) {
 	// Create and add exit order
-	exit := trading.NewExit(&exitPrice, timestamp, reason)
+	exit := trading.NewExit(&exitPrice, pos.Quantity, timestamp, reason)
 	pos.Orders = append(pos.Orders, exit)
 
 	// Cancel SL and TP orders
