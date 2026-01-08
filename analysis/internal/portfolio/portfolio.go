@@ -33,14 +33,12 @@ func (p *Portfolio) updatePositions(c candle.Candle) {
 			continue
 		}
 
-		// Check for market close (3:59 PM ET candle) - close open positions
 		if p.isMarketCloseCandle(c) && pos.Status == trading.PositionOpen {
 			p.closePositionAtPrice(pos, c.Close, "market_close", c.Timestamp)
 			ReportPortfolioPerformance(p.Positions)
 			continue
 		}
 
-		// Check for position expiration (for pending limit entries)
 		if pos.Status == trading.PositionPending && c.Timestamp.After(pos.Expiration) {
 			p.cancelPosition(pos)
 			continue
@@ -237,8 +235,8 @@ func (p *Portfolio) takeProfitTriggered(action trading.Action, targetPrice float
 
 func ReportPortfolioPerformance(positions []trading.Position) {
 	var profit float64
-	var fullTrades, fullWins int   // Closed via TP or SL
-	var exitTrades, exitWins int   // Closed via Exit order (market close, etc.)
+	var fullTrades, fullWins int
+	var exitTrades, exitWins int
 
 	for _, pos := range positions {
 		if pos.Status != trading.PositionClosed {
