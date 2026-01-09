@@ -28,8 +28,11 @@ services:
   redis:
     image: redis:7.2-alpine
     restart: unless-stopped
+    command:
+      - redis-server
+      - /usr/local/etc/redis/redis.conf
     volumes:
-      - redis-data:/data
+      - ./deploy/containers/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
     ports:
       - "6379:6379"
 
@@ -46,5 +49,4 @@ services:
       - postgres-data:/var/lib/postgresql/data
 
 volumes:
-  redis-data: {}
   postgres-data: {}
