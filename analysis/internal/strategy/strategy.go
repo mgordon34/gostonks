@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"runtime/debug"
 	"time"
 
 	"github.com/mgordon34/gostonks/analysis/cmd/trading"
@@ -118,6 +119,11 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 		if tsNY.Before(startTime) || !tsNY.Before(endTime) {
 			continue
 		}
+		// prevDay := tsNY.AddDate(0, 0, -1)
+		// prevDayOpen := time.Date(prevDay.Year(), prevDay.Month(), prevDay.Day(), 9, 30, 0, 0, b.Location)
+		// prevDayClose := time.Date(prevDay.Year(), prevDay.Month(), prevDay.Day(), 16, 00, 0, 0, b.Location)
+		// prevDayHigh := b.getMaxInRange(c.Symbol, prevDayOpen, prevDayClose)
+		// prevDayLow := b.getMinInRange(c.Symbol, prevDayOpen, prevDayClose)
 
 		raids := b.Pools.GetPools(false)
 		if len(raids) == 0 {
@@ -125,17 +131,17 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 		}
 		inverses, err := b.Gaps.GetInverses(&c, 0, 20)
 		if err != nil {
-			log.Fatalf("Error getting inverses: %v", err)
+			log.Fatalf("Error getting inverses: %v\n%s", err, debug.Stack())
 		}
 
 		for _, raid := range raids {
 			raidAge, err := raid.RaidCandle.Age(&c)
 			if err != nil {
-				log.Fatalf("Error getting raid age: %v", err)
+				log.Fatalf("Error getting raid age: %v\n%s", err, debug.Stack())
 			}
 			raidWidth, err := raid.Candle.Age(raid.RaidCandle)
 			if err != nil {
-				log.Fatalf("Error getting raid width: %v", err)
+				log.Printf("Error getting raid width: %v\nLP candle: %+v\nRaid Candle: %+v\n%s", err, *raid.Candle, *raid.RaidCandle, debug.Stack())
 			}
 
 			if raidAge > 50 || raidWidth > math.MaxInt {
@@ -147,9 +153,10 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 				continue
 			}
 			for _, inverse := range inverses {
-				if raid.Direction == Buyside && inverse.Direction == Buyside && c.Close < raid.Price {
-					sl := b.getMaxInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).High
-					if (sl - c.Close) > 100 || (sl - c.Close) < 10 {
+				if raid.Direction == Buyside && inverse.Direction == Buyside && c.Close < raid.Price /*&& c.Close < prevDayHigh.High*/ {
+					// sl := b.getMaxInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).High
+					sl := inverse.Candle.High + (inverse.Candle.High - c.Close) * 1
+					if (sl - c.Close) > 100 || (sl - c.Close) < 0 {
 						continue
 					}
 					tp := c.Close - (sl - c.Close) * 1
@@ -164,9 +171,10 @@ func (b *BarStrategy) GenerateSignal(c candle.Candle) *Signal {
 					}
 					b.trades++
 					return &signal
-				} else if raid.Direction == Sellside && inverse.Direction == Sellside  && c.Close > raid.Price {
-					sl := b.getMinInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).Low
-					if (c.Close - sl) > 100 || (c.Close - sl) < 10 {
+				} else if raid.Direction == Sellside && inverse.Direction == Sellside  && c.Close > raid.Price /*&& c.Close > prevDayLow.Low*/ {
+					// sl := b.getMinInRange(c.Symbol, raid.RaidCandle.Timestamp, c.Timestamp).Low
+					sl := inverse.Candle.Low - (c.Close - inverse.Candle.Low) * 1
+					if (c.Close - sl) > 100 || (c.Close - sl) < 0 {
 						continue
 					}
 					tp := c.Close + (c.Close - sl) * 1
@@ -217,7 +225,7 @@ func (b *BarStrategy) getMinInRange(symbol string, startTime time.Time, endTime 
 	var low candle.Candle
 
 	if startTime.After(endTime) {
-		log.Fatal("startTime cannot be past endTime")
+		log.Fatalf("startTime cannot be past endTime\n%s", debug.Stack())
 	}
 	for ts := startTime; !ts.After(endTime); ts = ts.Add(time.Minute) {
 		ts = ts.UTC().Truncate(time.Minute)
@@ -235,7 +243,7 @@ func (b *BarStrategy) getMaxInRange(symbol string, startTime time.Time, endTime 
 	var high candle.Candle
 
 	if startTime.After(endTime) {
-		log.Fatal("startTime cannot be past endTime")
+		log.Fatalf("startTime cannot be past endTime\n%s", debug.Stack())
 	}
 	for ts := startTime; !ts.After(endTime); ts = ts.Add(time.Minute) {
 		ts = ts.UTC().Truncate(time.Minute)
