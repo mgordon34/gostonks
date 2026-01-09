@@ -90,7 +90,9 @@ func (gm *GapManager) addGapIfExists() {
 		return
 	}
 
-	if gm.candles[0].High < gm.candles[2].Low {
+	buyDiff := gm.candles[2].Low - gm.candles[0].High 
+	sellDiff := gm.candles[0].Low - gm.candles[2].High
+	if buyDiff > 1 {
 		gap := FairValueGap{
 			Direction: Buyside,
 			StartPrice: gm.candles[0].High,
@@ -102,7 +104,7 @@ func (gm *GapManager) addGapIfExists() {
 		}
 		// log.Printf("Adding FvG at %s: %+v", gap.Candle.Timestamp.Format(time.RFC3339), gap)
 		gm.gaps = append(gm.gaps, gap)
-	} else if gm.candles[0].Low > gm.candles[2].High {
+	} else if sellDiff > 1 {
 		gap := FairValueGap{
 			Direction: Sellside,
 			StartPrice: gm.candles[0].Low,
