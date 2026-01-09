@@ -66,6 +66,10 @@ if err != nil {
 }
 ```
 
+### Redis persistence
+
+High-volume `data_request` operations were triggering Redis' default RDB snapshot (`10000 changes in 60 seconds`) which blocks writers long enough for the Go services to appear frozen. Docker Compose now mounts `deploy/containers/redis/redis.conf`, which disables snapshots and append-only persistence so Redis stays responsive while pushing hundreds of thousands of candles. If you need durable Redis storage for another workflow, update that config (or stop mounting it) before deploying.
+
 
 ## Technology
 Backend Services: Go
