@@ -146,7 +146,7 @@ def get_dbn_historical_batch(symbol: str, start_date: str, end_date: str):
     new_job = client.batch.submit_job(
         dataset=dataset,
         symbols=f"{symbol}.v.0",
-        schema="ohlcv-1d",
+        schema="ohlcv-1m",
         stype_in="continuous",
         split_duration="month",
         start=start_date,
@@ -173,7 +173,7 @@ def main() -> None:
         raise RuntimeError("DB_URL environment variable is not set")
 
     total = 0
-    files = list_dbn_files("GLBX-20251215-CBKMS5UP57")
+    files = list_dbn_files("GLBX-ES-2015-01-01-2024-12-31")
     if files:
         print("Found .dbn.zst files:")
         for path in files:
@@ -187,7 +187,7 @@ def main() -> None:
     print(f"Inserted {total} candles")
 
     # request_data("ES", "2025-11-01", "2025-12-01")
-    # get_dbn_historical_batch("ES", "2025-01-01", "2025-12-10")
+    # get_dbn_historical_batch("ES", "2015-01-01", "2024-12-31")
     # unpack_dbn_from_file("GLBX-NQ-2025-01-01-2025-12-10/glbx-mdp3-20251201-20251209.ohlcv-1m.dbn.zst")
 
 
