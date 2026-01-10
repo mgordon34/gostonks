@@ -124,6 +124,29 @@ func (p *Portfolio) newPositionFromSignal(signal *strategy.Signal, fillPrice flo
 }
 
 func (p *Portfolio) updateOrders(pos *trading.Position, c candle.Candle) {
+	var exits int
+	for _, order := range pos.Orders {
+		switch o := order.(type) {
+		case *trading.StopLoss:
+			if o.GetStatus() == trading.OrderSubmitted {
+				if p.stopLossTriggered(pos.Action, *o.GetPrice(), c) {
+					exits++
+				}
+			}
+		case *trading.TakeProfit:
+			if o.GetStatus() == trading.OrderSubmitted {
+				if p.takeProfitTriggered(pos.Action, *o.GetPrice(), c) {
+					exits++
+				}
+			}
+		}
+	}
+	if exits > 1 {
+		log.Printf("Double Exits")
+		p.cancelPosition(pos)
+	}
+
+
 	for _, order := range pos.Orders {
 		switch o := order.(type) {
 		case *trading.LimitEntry:
@@ -238,7 +261,13 @@ func ReportPortfolioPerformance(positions []trading.Position) {
 	var fullTrades, fullWins int
 	var exitTrades, exitWins int
 
+	var cancelCount int
+
 	for _, pos := range positions {
+		if pos.Status == trading.PositionCancelled {
+			cancelCount++
+			continue
+		}
 		if pos.Status != trading.PositionClosed {
 			continue
 		}
@@ -299,4 +328,5 @@ func ReportPortfolioPerformance(positions []trading.Position) {
 	log.Println(str)
 	log.Printf("  Full closes (TP/SL): %d trades, %.2f winrate", fullTrades, fullWinrate)
 	log.Printf("  Early exits: %d trades, %.2f winrate", exitTrades, exitWinrate)
+	log.Printf("  Cancelled: %d", cancelCount)
 }
