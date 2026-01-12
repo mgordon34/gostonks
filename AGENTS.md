@@ -6,7 +6,7 @@ Target a conventional Go layout where each service owns a top-level directory (e
 - Service-specific code lives under `<service>/internal/...` while shared utilities live under `internal/<domain>` at the repo root. Avoid leaking `internal` packages across services unless absolutely necessary.
 - Container assets (`Dockerfile`, healthcheck scripts) stay in `deploy/containers/<service>`, and any Compose-level configuration (env files, example secrets) belongs in `deploy/compose`.
 - Store infrastructure manifests (migrations, fixtures, mock data) in `assets/` and keep configuration templates in `config/`.
-- Tests mirror the Go packages inside `tests/`, e.g., `internal/portfolio/service.go` => `tests/internal/portfolio/service_test.go`.
+- Tests mirror the Go packages inside `tests/`, e.g., `cmd/portfolio/service.go` => `tests/internal/portfolio/service_test.go`.
 
 ## Build, Test, and Development Commands
 Standard workflow assumes Go 1.21+ and Docker Desktop:
