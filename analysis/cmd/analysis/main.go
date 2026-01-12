@@ -13,7 +13,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/mgordon34/gostonks/analysis/internal/portfolio"
+	"github.com/mgordon34/gostonks/analysis/cmd/portfolio"
 	"github.com/mgordon34/gostonks/analysis/internal/risk"
 	"github.com/mgordon34/gostonks/analysis/internal/strategy"
 	"github.com/mgordon34/gostonks/internal/config"
