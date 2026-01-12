@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"time"
 
+	"github.com/mgordon34/gostonks/control/cmd/backtest"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -14,11 +16,11 @@ type ControlMessage struct {
 }
 
 type DataRequest struct {
-	Market    string `json:"market"`
-	Symbol    string `json:"symbol"`
-	Timeframe string `json:"timeframe"`
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
+	Market    string    `json:"market"`
+	Symbol    string    `json:"symbol"`
+	Timeframe string    `json:"timeframe"`
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
 }
 
 func main() {
@@ -34,14 +36,26 @@ func TriggerDataRequest() {
 	})
 	defer client.Close()
 
+	startTime, err := time.Parse(time.RFC3339, "2015-01-02T16:52:00-05:00")
+	if err != nil {
+		log.Fatalf("Failed to parse start time: %v", err)
+	}
+	endTime, err := time.Parse(time.RFC3339, "2025-12-18T16:53:00-05:00")
+	if err != nil {
+		log.Fatalf("Failed to parse end time: %v", err)
+	}
+
+	b := backtest.NewBacktestSession()
+	log.Printf("Created new backtest session: %s with ID %d and Portfolio ID %id", b.Session.Name, b.Session.ID, b.PortfolioID)
+
 	msg := ControlMessage{
 		Type: "data_request",
 		Data: DataRequest{
 			Market:    "futures",
 			Symbol:    "NQ",
 			Timeframe: "1m",
-			StartTime: "2015-01-02T16:52:00-05:00",
-			EndTime:   "2025-12-18T16:53:00-05:00",
+			StartTime: startTime,
+			EndTime:   endTime,
 		},
 	}
 
