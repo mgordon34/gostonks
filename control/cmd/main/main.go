@@ -69,5 +69,5 @@ func TriggerDataRequest() {
 		log.Fatalf("Failed to publish message: %v", err)
 	}
 
-	log.Println("Data request published successfully")
+	log.Println("Data request published successfully!")
 }
