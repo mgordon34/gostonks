@@ -46,7 +46,7 @@ func TriggerDataRequest() {
 	}
 
 	b := backtest.NewBacktestSession()
-	log.Printf("Created new backtest session: %s with ID %d and Portfolio ID %id", b.Session.Name, b.Session.ID, b.PortfolioID)
+	log.Printf("Created new backtest session: %s with ID %d and Portfolio ID %d", b.Session.Name, b.Session.ID, b.PortfolioID)
 
 	msg := ControlMessage{
 		Type: "data_request",
