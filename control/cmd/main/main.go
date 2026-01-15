@@ -16,12 +16,13 @@ type ControlMessage struct {
 }
 
 type DataRequest struct {
-	SessionName string 	`json:"session_name"`
-	Market    string    `json:"market"`
-	Symbol    string    `json:"symbol"`
-	Timeframe string    `json:"timeframe"`
-	StartTime time.Time `json:"start_time"`
-	EndTime   time.Time `json:"end_time"`
+	SessionName string 		`json:"session_name"`
+	PortfolioID int			`json:"portfolio_id"`
+	Market    	string    	`json:"market"`
+	Symbol    	string    	`json:"symbol"`
+	Timeframe 	string    	`json:"timeframe"`
+	StartTime 	time.Time 	`json:"start_time"`
+	EndTime   	time.Time 	`json:"end_time"`
 }
 
 func main() {
@@ -37,8 +38,8 @@ func TriggerDataRequest() {
 	})
 	defer client.Close()
 
-	// startTime, err := time.Parse(time.RFC3339, "2015-01-02T16:52:00-05:00")
-	startTime, err := time.Parse(time.RFC3339, "2025-12-02T16:52:00-05:00")
+	startTime, err := time.Parse(time.RFC3339, "2015-01-02T16:52:00-05:00")
+	// startTime, err := time.Parse(time.RFC3339, "2025-12-02T16:52:00-05:00")
 	if err != nil {
 		log.Fatalf("Failed to parse start time: %v", err)
 	}

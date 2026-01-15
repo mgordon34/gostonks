@@ -10,6 +10,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type QueueMessage struct {
+    Type        string  `json:"type"`         // "candle" or "event"
+    SessionName string  `json:"session_name"`
+    Candle      *Candle `json:"candle,omitempty"`
+    Event       *Event  `json:"event,omitempty"`
+}
+
+type Event struct {
+    Name        string `json:"name"`         // "session_start" or "session_complete"
+    PortfolioID int    `json:"portfolio_id"`
+    CandleCount int    `json:"candle_count"`
+}
+
 type Candle struct {
 	ID        int       `db:"id"`
 	Market    string    `db:"market"`
