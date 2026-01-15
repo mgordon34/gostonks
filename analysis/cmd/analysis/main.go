@@ -21,6 +21,14 @@ import (
 	"github.com/mgordon34/gostonks/market/cmd/candle"
 )
 
+type SessionState struct {
+    Name             string
+    Portfolio        *portfolio.Portfolio
+    CandlesProcessed int
+    StartTime        time.Time
+}
+
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -37,7 +45,7 @@ func main() {
 
 	var strategies []strategy.Strategy
 	strategies = append(strategies, strategy.NewBarStrategy(ctx, candleRepository, "iFVG Strat", "futures", []string{"NQ"}, 2880))
-	portfolio := portfolio.Portfolio{
+	port := portfolio.Portfolio{
 		Name: "Backtest Portfolio",
 		Strategies: strategies,
 		Balance: 100000,
@@ -45,6 +53,9 @@ func main() {
 	}
 
 	log.Printf("Analysis service listening for candles on redis list 'market' at %s", addr)
+
+	// TODO: Be able to handle multiple sessions
+    var activeSession *SessionState
 
 	for {
 		values, err := client.BLPop(ctx, 0*time.Second, "market").Result()
@@ -57,18 +68,34 @@ func main() {
 			time.Sleep(time.Second)
 			continue
 		}
-		if len(values) == 2 {
-			var c candle.Candle
-			err := json.Unmarshal([]byte(values[1]), &c)
-			if err != nil {
-				log.Printf("Json unmarshalling failed: %d", err)
-				continue
-			}
-			// log.Printf("Received candle payload for %s on %s", c.Symbol, c.Timestamp.Format("2006-01-02 15:04:05"))
 
-			portfolio.ProcessCandle(c)
-			continue
-		}
-		log.Printf("Unexpected BLPOP response: %v", values)
+		var msg candle.QueueMessage
+        json.Unmarshal([]byte(values[1]), &msg)
+
+        switch msg.Type {
+        case "event":
+            if msg.Event.Name == "session_start" {
+                activeSession = &SessionState{
+                    Name:      msg.SessionName,
+                    Portfolio: &port,
+                    StartTime: time.Now(),
+                }
+                log.Printf("Session %s started with Portfolio %d",
+                    msg.SessionName, msg.Event.PortfolioID)
+            } else if msg.Event.Name == "session_complete" {
+                if activeSession != nil && activeSession.Name == msg.SessionName {
+                    log.Printf("Session %s complete: processed %d candles",
+                        msg.SessionName, activeSession.CandlesProcessed)
+                    portfolio.ReportPortfolioPerformance(activeSession.Portfolio.Positions)
+                    activeSession = nil
+                }
+            }
+
+        case "candle":
+            if activeSession != nil && activeSession.Name == msg.SessionName {
+                activeSession.Portfolio.ProcessCandle(*msg.Candle)
+                activeSession.CandlesProcessed++
+            }
+        }
 	}
 }
