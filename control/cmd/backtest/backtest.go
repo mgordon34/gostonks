@@ -1,15 +1,16 @@
 package backtest
 
 import (
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/mgordon34/gostonks/analysis/cmd/portfolio"
-	"github.com/mgordon34/gostonks/control/cmd/control"
 )
 
 type Backtest struct {
-	Session 	*control.Session
+	ID 			int
+	SessionName string
 	Market 		string
 	Symbols 	[]string
 	StartTime 	time.Time
@@ -19,12 +20,9 @@ type Backtest struct {
 	PortfolioID	int
 }
 
-func NewBacktestSession() *Backtest {
-	session := control.Session{
-		ID: 1,
-		Name: "Test Backtest",
-	}
+var sessionCount int
 
+func NewBacktestSession() *Backtest {
 	// TODO: make this an argument in
 	startTime, err := time.Parse(time.RFC3339, "2015-01-02T16:52:00-05:00")
 	if err != nil {
@@ -36,7 +34,7 @@ func NewBacktestSession() *Backtest {
 	}
 
 	return &Backtest{
-		Session: &session,
+		SessionName: fmt.Sprintf("Backtest-%d", sessionCount),
 		Market: "futures",
 		Symbols: []string{"NQ"},
 		StartTime: startTime,

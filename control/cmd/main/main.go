@@ -11,11 +11,12 @@ import (
 )
 
 type ControlMessage struct {
-	Type string      `json:"type"`
-	Data DataRequest `json:"data"`
+	Type string      	`json:"type"`
+	Data DataRequest 	`json:"data"`
 }
 
 type DataRequest struct {
+	SessionName string 	`json:"session_name"`
 	Market    string    `json:"market"`
 	Symbol    string    `json:"symbol"`
 	Timeframe string    `json:"timeframe"`
@@ -36,7 +37,8 @@ func TriggerDataRequest() {
 	})
 	defer client.Close()
 
-	startTime, err := time.Parse(time.RFC3339, "2015-01-02T16:52:00-05:00")
+	// startTime, err := time.Parse(time.RFC3339, "2015-01-02T16:52:00-05:00")
+	startTime, err := time.Parse(time.RFC3339, "2025-12-02T16:52:00-05:00")
 	if err != nil {
 		log.Fatalf("Failed to parse start time: %v", err)
 	}
@@ -46,11 +48,12 @@ func TriggerDataRequest() {
 	}
 
 	b := backtest.NewBacktestSession()
-	log.Printf("Created new backtest session: %s with ID %d and Portfolio ID %d", b.Session.Name, b.Session.ID, b.PortfolioID)
+	log.Printf("Created new backtest session: %s with Portfolio ID %d", b.SessionName, b.PortfolioID)
 
 	msg := ControlMessage{
 		Type: "data_request",
 		Data: DataRequest{
+			SessionName: b.SessionName,
 			Market:    "futures",
 			Symbol:    "NQ",
 			Timeframe: "1m",

@@ -12,11 +12,12 @@ import (
 )
 
 type DataRequest struct {
-	Market    string    `json:"market"`
-	Symbol    string    `json:"symbol"`
-	StartTime time.Time `json:"start_time"`
-	EndTime   time.Time `json:"end_time"`
-	Timeframe string    `json:"timeframe"`
+	SessionName string		`json:"session_name"`
+	Market 		string 		`json:"market"`
+	Symbol    	string    	`json:"symbol"`
+	StartTime 	time.Time 	`json:"start_time"`
+	EndTime   	time.Time 	`json:"end_time"`
+	Timeframe 	string    	`json:"timeframe"`
 }
 
 type Broker interface {
